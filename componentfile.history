@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<History> 
+  <File usedCount="2" path="stm32f4-discovery/libpdmfilter_gcc.a"/>  
+  <File usedCount="2" path="cmsis_lib/include/stm32f4xx_spi.h"/>  
+  <File usedCount="2" path="cmsis_lib/include/stm32f4xx_i2c.h"/>  
+  <File usedCount="2" path="cmsis_lib/include/stm32f4xx_dma.h"/>  
+  <File usedCount="2" path="cmsis_lib/include/stm32f4xx_dac.h"/>  
+  <File usedCount="2" path="cmsis_lib/include/stm32f4xx_syscfg.h"/>  
+  <File usedCount="2" path="cmsis_lib/source/stm32f4xx_syscfg.c"/>  
+  <File usedCount="2" path="cmsis_lib/source/stm32f4xx_dac.c"/>  
+  <File usedCount="2" path="cmsis_lib/source/stm32f4xx_dma.c"/>  
+  <File usedCount="2" path="cmsis_lib/source/stm32f4xx_i2c.c"/>  
+  <File usedCount="2" path="cmsis_lib/source/stm32f4xx_spi.c"/>  
+  <File usedCount="2" path="stm32f4-discovery/pdm_filter.h"/>  
+  <File usedCount="2" path="stm32f4-discovery/stm32f4_discovery.c"/>  
+  <File usedCount="2" path="stm32f4-discovery/stm32f4_discovery.h"/>  
+  <File usedCount="2" path="stm32f4-discovery/stm32f4_discovery_audio_codec.c"/>  
+  <File usedCount="2" path="stm32f4-discovery/stm32f4_discovery_audio_codec.h"/>  
+  <File usedCount="2" path="stm32f4-discovery/stm32f4_discovery_lis302dl.c"/>  
+  <File usedCount="2" path="stm32f4-discovery/stm32f4_discovery_lis302dl.h"/>  
+  <File usedCount="2" path="stm32f4_discovery_callbacks.c"/>  
+  <File usedCount="2" path="cmsis_lib/include/stm32f4xx_adc.h"/>  
+  <File usedCount="2" path="cmsis_lib/source/stm32f4xx_adc.c"/>
+</History>
