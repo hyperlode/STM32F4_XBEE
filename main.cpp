@@ -69,19 +69,12 @@ int main(void)
 	init();
 	initDiscoveryBoard();
 
-
 	/*
 	//init machine control
 	MachineControl machineControl;
 	machineControlPointer = &machineControl;
 	machineControl.getCharFunctionPointer = &VCP_get_char;
 	/**/
-
-
-
-
-
-
 
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 	//GPIO_InitTypeDef GPIO_initStructre; defined in .h file, has to be available because we work with two buttons on one pin...
@@ -107,68 +100,40 @@ int main(void)
 
 	//refresh machine control loop
 	while(1){
-		/*
-		machineControl.refresh(millis);
-		/**/
 
-
-
-/*
-
-		if (millis - millisMemory_testing >= 1){
-			millisMemory_testing = millis; //edge control
-
-
-			if (isInit){
-			//	testEncoder.refresh();
-				testEncoder2.refresh();
-				testEncoder3.refresh();
-				//printf("update encoder data.\r\n");
-			}
-		}
-
-
-		if (millis - millisMemory_outputToSerial >= 2000){
-			STM_EVAL_LEDToggle(LED3);
-			millisMemory_outputToSerial = millis;//edgecontrol
-			if (isInit){
-				//printf("oieoe what didd is dooo.\r\n");
-				//printf("leftEncoder: %d -- ",leftEncoder);
-				//printf("rightEncoder: %d \r\n",rightEncoder);
-				//printf("raw: %x, --%x " , TIM2->CNT ,TIM4->CNT);
-				//printf("test: %x, --%x \r\n" , testLeft ,testRight);
-				printf("--------------------------------\r\n");
-
-				//printf("encvalue1: decimal: %d , hex: %x\r\n" , testEncoder.getValue() , testEncoder.getValue() );
-				printf("encvalue2: decimal: %d , hex: %x\r\n" , testEncoder2.getValue() , testEncoder2.getValue() );
-				printf("encvalue3: decimal: %d , hex: %x\r\n" , testEncoder3.getValue() , testEncoder3.getValue() );
-
-			}else{
-				isInit = true;
-				//test timer encoder capture
-				printf("initializing encoders.\r\n");
-				//testEncoder.init(ENCODER_1);
-				testEncoder2.init(ENCODER_2);
-				testEncoder3.init(ENCODER_3);
-				////////encodersInit();
-
-
-			}
-		}
-
-		//
-		//}
-
-		 */
-/**/
 		uint8_t theByte;
-		if (VCP_get_char(&theByte))
-		{
-			//if ( theByte != '\r' &&  theByte != '\n'){
-				printf("Chwwar Sent: %c  \r\n", theByte); //VCP_put_char(theByte);
-			//}
+		if (VCP_get_char(&theByte)){
+
+			if ( theByte == '\r' || theByte == '\n' ){
+				//these are the stop characters
+				if (serialBufferOverflow){
+					serialBufferOverflow = false;
+					serialBufferPosition =0;
+					serialBuffer[serialBufferPosition]='\0';
+				}else if (serialBufferPosition>0){
+					printf("buffer: %s\r\n", serialBuffer);
+					serialBufferPosition =0;
+					serialBuffer[serialBufferPosition]='\0';
+				}
+
+			}else if (serialBufferPosition >= SERIAL_BUFFER_SIZE){
+				//check overflow
+				if (!serialBufferOverflow){
+					printf("serial buffer overflow, max chars: %d. Buffer will be purged until newline character received. \r\n", SERIAL_BUFFER_SIZE);
+
+				}
+				serialBufferOverflow = true;
+				serialBufferPosition = 0;
+			}else if (!serialBufferOverflow){
+				//record char in buffer
+				serialBuffer[serialBufferPosition] = theByte;
+				serialBufferPosition ++;
+				serialBuffer[serialBufferPosition]='\0';
+			}
+
 		}
-		/**/
+
+
 		/**/
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 			GPIO_InitTypeDef GPIO_InitDef;

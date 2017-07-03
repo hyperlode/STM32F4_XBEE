@@ -34,6 +34,12 @@
 	static uint16_t adcSampleChannelCounter = 0;
 	static uint16_t adcNumberOfSampleCycles= 0;
 
+	//char* buffer;
+	#define SERIAL_BUFFER_SIZE 10
+	char serialBuffer[SERIAL_BUFFER_SIZE+1];
+	uint8_t serialBufferPosition = 0;
+	bool serialBufferOverflow = false;
+
 
 	uint32_t  millisMemory_testing = 0;
 	uint32_t  millisMemory_outputToSerial = 0;
