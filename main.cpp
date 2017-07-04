@@ -88,11 +88,122 @@ int main(void)
 	GPIO_Init(GPIOD,&GPIO_initStructre);//Affecting the port with the initialization structure configuration
 
 
-	GPIO_SetBits(GPIOD, GPIO_Pin_12);
+	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
 
 
 
+
+
+
+
+
+	//UART
+	GPIO_InitTypeDef     GPIO_InitStruct;
+	// Enable clock for GPIOA
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	/**
+	* Tell pins PA2 and PA3 which alternating function you will use
+	* @important Make sure, these lines are before pins configuration!
+	*/
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+	// Initialize pins as alternating function
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+
+
+
+	/**
+	 * Enable clock for USART2 peripheral
+	 */
+	RCC_APB2PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+
+	/**
+	 * Set Baudrate to value you pass to function
+	 * Disable Hardware Flow control
+	 * Set Mode To TX and RX, so USART will work in full-duplex mode
+	 * Disable parity bit
+	 * Set 1 stop bit
+	 * Set Data bits to 8
+	 *
+	 * Initialize USART1
+	 * Activate USART1
+	 */
+
+
+	//USART_InitStruct.USART_BaudRate = baudrate;
+	USART_InitStruct.USART_BaudRate = 9600;
+	USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStruct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+	USART_InitStruct.USART_Parity = USART_Parity_No;
+	USART_InitStruct.USART_StopBits = USART_StopBits_1;
+	USART_InitStruct.USART_WordLength = USART_WordLength_8b;
+	USART_Init(USART2, &USART_InitStruct);
+	USART_Cmd(USART2, ENABLE);
+
+
+
+	/**
+	 * Set Channel to USART1
+	 * Set Channel Cmd to enable. That will enable USART1 channel in NVIC
+	 * Set Both priorities to 0. This means high priority
+	 *
+	 * Initialize NVIC
+	 */
+	NVIC_InitTypeDef NVIC_InitStruct;
+
+	NVIC_InitStruct.NVIC_IRQChannel = USART2_IRQn;
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
+	NVIC_Init(&NVIC_InitStruct);
+
+
+
+	/**
+		 * Enable RX interrupt
+		 */
+		USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+
+
+
+
+
+
+
+
+
+
+	FlagStatus flagTest;
+
+	//flagTest = SET;
+
+
+	/*
+				RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+				GPIO_InitTypeDef GPIO_InitDef;
+				GPIO_InitDef.GPIO_Pin = GPIO_Pin_0;
+				GPIO_InitDef.GPIO_Mode = GPIO_Mode_IN ;
+
+				GPIO_InitDef.GPIO_OType = GPIO_OType_PP;
+				GPIO_InitDef.GPIO_PuPd = GPIO_PuPd_DOWN;
+				GPIO_InitDef.GPIO_Speed = GPIO_Speed_100MHz;
+				GPIO_Init(GPIOA ,&GPIO_InitDef);
+
+
+				if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)){
+					printf("button pressed\r\n " );
+				}else{
+					//printf("button not pressed\r\n " );
+
+				}
+			/**/
 
 	bool isInit = false;
 
@@ -101,6 +212,8 @@ int main(void)
 	//refresh machine control loop
 	while(1){
 
+
+		//serial connection VCP (USB)
 		uint8_t theByte;
 		if (VCP_get_char(&theByte)){
 
@@ -114,6 +227,10 @@ int main(void)
 					printf("buffer: %s\r\n", serialBuffer);
 					serialBufferPosition =0;
 					serialBuffer[serialBufferPosition]='\0';
+
+
+					flagTest = USART_GetFlagStatus(USART2,USART_FLAG_RXNE);
+					printf("usartflag: %d",flagTest);
 				}
 
 			}else if (serialBufferPosition >= SERIAL_BUFFER_SIZE){
@@ -134,25 +251,11 @@ int main(void)
 		}
 
 
-		/**/
-			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-			GPIO_InitTypeDef GPIO_InitDef;
-			GPIO_InitDef.GPIO_Pin = GPIO_Pin_0;
-			GPIO_InitDef.GPIO_Mode = GPIO_Mode_IN ;
-
-			GPIO_InitDef.GPIO_OType = GPIO_OType_PP;
-			GPIO_InitDef.GPIO_PuPd = GPIO_PuPd_DOWN;
-			GPIO_InitDef.GPIO_Speed = GPIO_Speed_100MHz;
-			GPIO_Init(GPIOA ,&GPIO_InitDef);
 
 
-			if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)){
-				printf("button pressed\r\n " );
-			}else{
-				//printf("button not pressed\r\n " );
 
-			}
-		/**/
+
+
 
 
 	}
@@ -288,14 +391,9 @@ void OTG_FS_WKUP_IRQHandler(void)
 
 #endif
 
+
+
 /*
- * void adc_multiChannelConfigure(){
-
-}
-*/
-
-
-/**/
 void ADC_IRQHandler() {
         // acknowledge interrupt
         uint16_t value;
@@ -338,6 +436,37 @@ void ADC_IRQHandler() {
 
 }
 /**/
+
+
+void USART2_IRQHandler(void)
+{
+	GPIO_SetBits(GPIOD, GPIO_Pin_12);
+   // if ((USART2->SR & USART_FLAG_RXNE) != (u16)RESET)
+   // {
+    	//printf ("success!");
+    	/*
+            i = USART_ReceiveData(USART2);
+            if(j == NUM)
+            {
+                name[j] = i;
+                j = 0;
+            }
+            else
+            {
+                name[j++] = i;
+            }
+            name[j] = '\0';
+            */
+   //}
+	if (USART_GetITStatus(USART2, USART_IT_RXNE)) {
+			//Do your stuff here
+			printf ("success!");
+			//Clear interrupt flag
+			USART_ClearITPendingBit(USART2, USART_IT_RXNE);
+		}
+}
+
+
 
 // ---external C
 /// Set interrupt handlers

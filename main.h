@@ -4,10 +4,12 @@
 //#define USE_VCP //in coocox in precompiler directives defined
 
 
+#include "stm32f4xx_usart.h"
 
 
 #ifdef __cplusplus
 	#include "MachineControl.h"
+
 	//#include "EncoderToTimer.h"
 
 
@@ -19,7 +21,7 @@
 
 	//char lodeStrTest []={'a','\0'};
 
-	MachineControl* machineControlPointer;
+	//MachineControl* machineControlPointer;
 
 	//EncoderToTimer testEncoder;
 	//EncoderToTimer testEncoder2;
@@ -46,6 +48,7 @@
 
 	uint32_t millis;
 
+	USART_InitTypeDef USART_InitStruct;
 
 
 
