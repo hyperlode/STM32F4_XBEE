@@ -8,10 +8,7 @@
 
 
 #ifdef __cplusplus
-	#include "MachineControl.h"
-
-	//#include "EncoderToTimer.h"
-
+	//#include "MachineControl.h"
 
 	#include <stdio.h>
 	extern "C"
@@ -19,13 +16,6 @@
 #endif
 
 
-	//char lodeStrTest []={'a','\0'};
-
-	//MachineControl* machineControlPointer;
-
-	//EncoderToTimer testEncoder;
-	//EncoderToTimer testEncoder2;
-	//EncoderToTimer testEncoder3;
 
 	//volatile uint32_t ticker, downTicker;
 	static uint32_t ticker, downTicker,ticker20ms ;
@@ -59,6 +49,7 @@
 	#include "stm32f4xx_rcc.h"
 	#include "stm32f4xx_exti.h"
 	#include "stm32f4xx_dac.h"
+	#include "misc.h"
 #ifdef USE_VCP
 	#include "usbd_cdc_core.h"
 	#include "usbd_usr.h"
@@ -69,6 +60,8 @@
 	#include "stm32f4_discovery.h"
 
 	void initDiscoveryBoard();
+	void initUSART3();
+	void init_usart1(uint32_t baud);
 #ifdef __cplusplus
 	}
 #endif
