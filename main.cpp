@@ -91,11 +91,15 @@ int main(void)
 	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
 
+	radio.init(1,9600);
 
 
 
+	//init_usart1(9600);
+	//init_USART1_bis();
 
-	init_usart1(9600);
+
+
 
 
 
@@ -248,10 +252,92 @@ void init_usart1(uint32_t baud){
 
 
 
+void init_USART1_bis(){
+
+
+		USART_InitTypeDef USART_InitStruct;
+		//UART
+		GPIO_InitTypeDef     GPIO_InitStruct;
+		// Enable clock for GPIOA
+		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+		/**
+		* Tell pins PA2 and PA3 which alternating function you will use
+		* @important Make sure, these lines are before pins configuration!
+		*/
+		GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1);
+		GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1);
+		// Initialize pins as alternating function
+		GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+		GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+		GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+		GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+		GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+		GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+
+
+
+		/**
+		 * Enable clock for USART2 peripheral
+		 */
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+
+		/**
+		 * Set Baudrate to value you pass to function
+		 * Disable Hardware Flow control
+		 * Set Mode To TX and RX, so USART will work in full-duplex mode
+		 * Disable parity bit
+		 * Set 1 stop bit
+		 * Set Data bits to 8
+		 *
+		 * Initialize USART1
+		 * Activate USART1
+		 */
+
+
+		//USART_InitStruct.USART_BaudRate = baudrate;
+		USART_InitStruct.USART_BaudRate = 9600;
+		USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+		USART_InitStruct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+		USART_InitStruct.USART_Parity = USART_Parity_No;
+		USART_InitStruct.USART_StopBits = USART_StopBits_1;
+		USART_InitStruct.USART_WordLength = USART_WordLength_8b;
+		USART_Init(USART1, &USART_InitStruct);
+
+		USART_Cmd(USART1, ENABLE);
+
+
+
+		/**
+		 * Set Channel to USART1
+		 * Set Channel Cmd to enable. That will enable USART1 channel in NVIC
+		 * Set Both priorities to 0. This means high priority
+		 *
+		 * Initialize NVIC
+		 */
+		NVIC_InitTypeDef NVIC_InitStruct;
+
+		NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
+		NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0;
+		NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
+		NVIC_Init(&NVIC_InitStruct);
+
+
+
+		/**
+			 * Enable RX interrupt
+			 */
+		USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+
+
+}
+
+
  void initUSART3(){
 
 
-
+		USART_InitTypeDef USART_InitStruct;
 		//UART
 		GPIO_InitTypeDef     GPIO_InitStruct;
 		// Enable clock for GPIOA
@@ -459,50 +545,6 @@ void OTG_FS_WKUP_IRQHandler(void)
 #endif
 
 
-
-/*
-void ADC_IRQHandler() {
-        // acknowledge interrupt
-        uint16_t value;
-        ADC_ClearITPendingBit(ADC1, ADC_IT_EOC);
-
-
-        value = ADC_GetConversionValue(ADC1);
-		switch (adcSampleChannelCounter){
-		   case 0:
-				temp = value;
-				adcSampleChannelCounter++;
-				break;
-		   case 1:
-				vref = value;
-				adcSampleChannelCounter++;
-				machineControlPointer->logVref(value);
-				break;
-
-			//all the other channels.
-		   default:
-				if (adcSampleChannelCounter<6){
-					//
-					//IOBoardHandler[0]->ADCInterruptHandler(adcSampleChannelCounter - 2, value); //IOBoard handle triggers.
-					machineControlPointer->speedInputADCInterrupt(adcSampleChannelCounter - 2, value);
-
-				}else{
-					//set adcSampleChannelCounter to 10IOBoardHandler[1]->ADCInterruptHandler(adcSampleChannelCounter - 6, value); //IOBoard handle triggers.
-				}
-
-				adcSampleChannelCounter++;
-				if (adcSampleChannelCounter ==6){
-					adcSampleChannelCounter =0;
-					adcNumberOfSampleCycles++;
-				}
-				break;
-
-		}
-
-
-
-}
-/**/
 void USART1_IRQHandler()
 {
 	GPIO_SetBits(GPIOD, GPIO_Pin_12);
@@ -522,23 +564,6 @@ void USART1_IRQHandler()
 void USART3_IRQHandler(void)
 {
 	GPIO_SetBits(GPIOD, GPIO_Pin_12);
-   // if ((USART2->SR & USART_FLAG_RXNE) != (u16)RESET)
-   // {
-    	//printf ("success!");
-    	/*
-            i = USART_ReceiveData(USART2);
-            if(j == NUM)
-            {
-                name[j] = i;
-                j = 0;
-            }
-            else
-            {
-                name[j++] = i;
-            }
-            name[j] = '\0';
-            */
-   //}
 	if (USART_GetITStatus(USART3, USART_IT_RXNE)) {
 			//Do your stuff here
 			printf ("success!");
@@ -548,30 +573,6 @@ void USART3_IRQHandler(void)
 }
 
 
-
-// ---external C
-/// Set interrupt handlers
-/// Handle interrupt
-/*
-void EXTI3_IRQHandler(void) {
-	machineControlPointer->Motor1InterruptHandler();
-
-}
-
-
-void EXTI4_IRQHandler(void) {
-	machineControlPointer->Motor2InterruptHandler();
-
-}
-
-
-
-/// Handle interrupt
-void EXTI1_IRQHandler(void) {
-	machineControlPointer->Motor3InterruptHandler();
-
-}
-*/
 #ifdef __cplusplus
  }
 #endif

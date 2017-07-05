@@ -160,6 +160,8 @@
     <File name="usb_lib/otg/usb_regs.h" path="usb_lib/otg/usb_regs.h" type="1"/>
     <File name="cmsis_lib/include/stm32f4xx_i2c.h" path="cmsis_lib/include/stm32f4xx_i2c.h" type="1"/>
     <File name="cmsis_lib/source/stm32f4xx_dma.c" path="cmsis_lib/source/stm32f4xx_dma.c" type="1"/>
+    <File name="XBEE.h" path="XBEE.h" type="1"/>
+    <File name="XBEE.cpp" path="XBEE.cpp" type="1"/>
     <File name="usb_lib/cdc" path="" type="2"/>
     <File name="usb_lib/otg/usb_defines.h" path="usb_lib/otg/usb_defines.h" type="1"/>
     <File name="cmsis_boot" path="" type="2"/>
@@ -197,7 +199,7 @@
     <File name="cmsis_lib/include" path="" type="2"/>
     <File name="usb_lib/cdc/usbd_cdc_core.h" path="usb_lib/cdc/usbd_cdc_core.h" type="1"/>
     <File name="AppliedDAC.cpp" path="AppliedDAC.cpp" type="1"/>
-    <File name="STM32F4-Discovery/stm32f4_discovery.c" path="STM32F4-Discovery/stm32f4_discovery.c" type="1"/>
     <File name="usb_lib/cdc/usbd_cdc_vcp.h" path="usb_lib/cdc/usbd_cdc_vcp.h" type="1"/>
+    <File name="STM32F4-Discovery/stm32f4_discovery.c" path="STM32F4-Discovery/stm32f4_discovery.c" type="1"/>
   </Files>
 </Project>

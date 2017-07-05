@@ -5,7 +5,7 @@
 
 
 #include "stm32f4xx_usart.h"
-
+#include "XBEE.h"
 
 #ifdef __cplusplus
 	//#include "MachineControl.h"
@@ -14,7 +14,22 @@
 	extern "C"
 	{
 #endif
-
+#include "stm32f4xx_adc.h"
+#include "stm32f4xx_conf.h"
+#include "stm32f4xx.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_rcc.h"
+#include "stm32f4xx_exti.h"
+#include "stm32f4xx_dac.h"
+#include "misc.h"
+#ifdef USE_VCP
+#include "usbd_cdc_core.h"
+#include "usbd_usr.h"
+#include "usbd_desc.h"
+#include "usbd_cdc_vcp.h"
+#include "usb_dcd_int.h"
+#endif
+#include "stm32f4_discovery.h"
 
 
 	//volatile uint32_t ticker, downTicker;
@@ -38,30 +53,16 @@
 
 	uint32_t millis;
 
-	USART_InitTypeDef USART_InitStruct;
+	XBEE radio;
 
 
 
-	#include "stm32f4xx_adc.h"
-	#include "stm32f4xx_conf.h"
-	#include "stm32f4xx.h"
-	#include "stm32f4xx_gpio.h"
-	#include "stm32f4xx_rcc.h"
-	#include "stm32f4xx_exti.h"
-	#include "stm32f4xx_dac.h"
-	#include "misc.h"
-#ifdef USE_VCP
-	#include "usbd_cdc_core.h"
-	#include "usbd_usr.h"
-	#include "usbd_desc.h"
-	#include "usbd_cdc_vcp.h"
-	#include "usb_dcd_int.h"
-#endif
-	#include "stm32f4_discovery.h"
 
 	void initDiscoveryBoard();
-	void initUSART3();
-	void init_usart1(uint32_t baud);
+	//void initUSART3();
+//	void init_usart1(uint32_t baud);
+	//void init_USART1_bis();
+
 #ifdef __cplusplus
 	}
 #endif
