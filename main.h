@@ -4,6 +4,9 @@
 //#define USE_VCP //in coocox in precompiler directives defined
 
 
+#define READ
+
+
 #include "stm32f4xx_usart.h"
 #include "XBEE.h"
 
@@ -56,7 +59,7 @@
 	XBEE* pRadio;
 
 
-
+	bool stringsAreEqual(char* A, char*B);
 
 	void initDiscoveryBoard();
 	//void initUSART3();

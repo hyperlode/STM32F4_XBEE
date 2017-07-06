@@ -140,14 +140,33 @@ int main(void)
 					serialBufferOverflow = false;
 					serialBufferPosition =0;
 					serialBuffer[serialBufferPosition]='\0';
+
+
 				}else if (serialBufferPosition>0){
-					printf("buffer: %s\r\n", serialBuffer);
+
+					printf("command sent: %s\r\n", serialBuffer);
+
+					//interprete command
+					if (stringsAreEqual(serialBuffer, "lode")){
+						printf("lode command!");
+					}else if (stringsAreEqual(serialBuffer, "xbee")){
+						radio.receiveBuffer_Readout_Flush();
+					}else{
+						printf("Invalid command received.\r\n"
+								"available commands:\r\n"
+								"\txbee: Shows xbee buffer\r\n"
+								"\tlode: Displays nonsense...\r\n");
+					}
+
 					serialBufferPosition =0;
 					serialBuffer[serialBufferPosition]='\0';
 
-
+/*
 					flagTest = USART_GetFlagStatus(USART1,USART_FLAG_RXNE);
 					printf("usartflag: %d",flagTest);
+*/
+
+
 				}
 
 			}else if (serialBufferPosition >= SERIAL_BUFFER_SIZE){
@@ -166,6 +185,10 @@ int main(void)
 			}
 
 		}
+
+
+
+
 	}
 }
 
@@ -189,6 +212,30 @@ void initDiscoveryBoard(){
 #ifdef __cplusplus
  extern "C" {
 #endif
+
+
+bool stringsAreEqual(char* A, char*B){
+	//check if two strings, char arrays terminated with a '/0' are equal
+
+	/*
+
+	bool test;
+	char text [2] = {'b','\0'};
+	char lode [2] = {'a','\0'};
+
+	test = stringsAreEqual(text, lode);
+	printf ("testresult: %d",test);
+	*/
+
+	uint32_t i = 0;
+	while (A[i] == B[i]){
+		if (A[i] == '\0'){
+			return true;
+		}
+		i++;
+	}
+	return false;
+}
 
 void init()
 {
@@ -302,19 +349,16 @@ void OTG_FS_WKUP_IRQHandler(void)
 #endif
 
 
+
+//XBEE UART receive interrupt handler, handle as c code.
 void USART1_IRQHandler()
 {
-
-
 	if (USART_GetITStatus(USART1, USART_IT_RXNE)){
 		char c = USART1->DR;
-		pRadio->receiveInterruptHandler( c );
-		//get newest incoming char/byte from data register and put in buffer
+		pRadio->receiveInterruptHandler	( c );
 		//printf(" %c",c);
-		//buf_putbyte(&msg,c);
 		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
 	}
-
 }
 
 
