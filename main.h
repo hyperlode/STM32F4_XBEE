@@ -53,7 +53,7 @@
 
 	uint32_t millis;
 
-	XBEE radio;
+	XBEE* pRadio;
 
 
 
