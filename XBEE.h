@@ -27,7 +27,7 @@ struct message{
 struct receivePackage{
 	uint32_t packageRecordPosition = 0;
 	bool packageRecording = false;
-	char packageRecordBuffer[RECEIVE_BUFFER_SIZE+1];
+	char packageData[RECEIVE_BUFFER_SIZE+1];
 
 	bool escapeNextChar = false;
 	uint32_t packageLength = 0;
@@ -59,10 +59,10 @@ private:
 	bool receiveBufferOverflow = false;
 	receivePackage bufferA;
 	*/
-	char receiveBuffer[RECEIVE_BUFFER_SIZE+1];
+	//char receiveBuffer[RECEIVE_BUFFER_SIZE+1];
 	uint16_t receiveBufferCounter =0;
-
 	receivePackage packageReceiveBuffer [NUMBER_OF_RECEIVEBUFFERS];
+	//receivePackage packageReceiveBuffer ;
 	
 };
 

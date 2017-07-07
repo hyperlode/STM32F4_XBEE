@@ -126,15 +126,15 @@
     <File name="cmsis_lib/include/stm32f4xx_rcc.h" path="cmsis_lib/include/stm32f4xx_rcc.h" type="1"/>
     <File name="usb_lib/otg/usb_dcd_int.h" path="usb_lib/otg/usb_dcd_int.h" type="1"/>
     <File name="cmsis_lib/source/stm32f4xx_syscfg.c" path="cmsis_lib/source/stm32f4xx_syscfg.c" type="1"/>
+    <File name="cmsis_boot/startup/startup_stm32f4xx.c" path="cmsis_boot/startup/startup_stm32f4xx.c" type="1"/>
     <File name="STM32F4-Discovery/stm32f4_discovery_lis302dl.c" path="STM32F4-Discovery/stm32f4_discovery_lis302dl.c" type="1"/>
     <File name="usb_lib/core" path="" type="2"/>
     <File name="stdio" path="" type="2"/>
-    <File name="cmsis_boot/startup/startup_stm32f4xx.c" path="cmsis_boot/startup/startup_stm32f4xx.c" type="1"/>
-    <File name="EncoderTimer.c" path="EncoderTimer.c" type="1"/>
-    <File name="cmsis_lib/source/stm32f4xx_rcc.c" path="cmsis_lib/source/stm32f4xx_rcc.c" type="1"/>
     <File name="usb_conf/usb_conf.h" path="usb_conf/usb_conf.h" type="1"/>
-    <File name="cmsis/core_cmInstr.h" path="cmsis/core_cmInstr.h" type="1"/>
+    <File name="cmsis_lib/source/stm32f4xx_rcc.c" path="cmsis_lib/source/stm32f4xx_rcc.c" type="1"/>
+    <File name="EncoderTimer.c" path="EncoderTimer.c" type="1"/>
     <File name="usb_lib/otg/usb_core.c" path="usb_lib/otg/usb_core.c" type="1"/>
+    <File name="cmsis/core_cmInstr.h" path="cmsis/core_cmInstr.h" type="1"/>
     <File name="usb_lib/otg/usb_dcd.h" path="usb_lib/otg/usb_dcd.h" type="1"/>
     <File name="STM32F4-Discovery/stm32f4_discovery_audio_codec.c" path="STM32F4-Discovery/stm32f4_discovery_audio_codec.c" type="1"/>
     <File name="usb_conf/usbd_desc.h" path="usb_conf/usbd_desc.h" type="1"/>
@@ -182,8 +182,8 @@
     <File name="cmsis_boot/stm32f4xx_conf.h" path="cmsis_boot/stm32f4xx_conf.h" type="1"/>
     <File name="cmsis_boot/system_stm32f4xx.h" path="cmsis_boot/system_stm32f4xx.h" type="1"/>
     <File name="EncoderToTimer.cpp" path="EncoderToTimer.cpp" type="1"/>
-    <File name="usb_lib/core/usbd_core.h" path="usb_lib/core/usbd_core.h" type="1"/>
     <File name="IOBoard.h" path="IOBoard.h" type="1"/>
+    <File name="usb_lib/core/usbd_core.h" path="usb_lib/core/usbd_core.h" type="1"/>
     <File name="usb_lib/core/usbd_core.c" path="usb_lib/core/usbd_core.c" type="1"/>
     <File name="usb_conf" path="" type="2"/>
     <File name="usb_lib/core/usbd_ioreq.c" path="usb_lib/core/usbd_ioreq.c" type="1"/>

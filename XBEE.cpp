@@ -103,10 +103,19 @@ void XBEE::receiveBuffer_Readout_Flush(){
 */
 
 void XBEE::readReceivedLocalPackage(){
+	//packageReceiveBuffer
+
+	for (uint8_t i = 0; i< this->packageReceiveBuffer[this->receiveBufferCounter].packageRecordPosition; i++)
+	{
+		printf("%02X ", this->packageReceiveBuffer[this->receiveBufferCounter].packageData[i]);
+	}
+	/*
 	for (uint8_t i = 0; i< this->packageReceiveBuffer[receiveBufferCounter].packageRecordPosition; i++)
 	{
-		printf("%02X ", packageReceiveBuffer[receiveBufferCounter].packageRecordBuffer[i]);
+		printf("%02X ", packageReceiveBuffer[receiveBufferCounter].packageData[i]);
 	}
+	*/
+
 	//this->receiveBufferOverflow = false;
 	//this->packageRecordPosition = 0;
 	//this->packageRecording = false;
@@ -169,59 +178,62 @@ void XBEE::receiveLocalPackage(char receivedByte){
 	//check if byte part of api package
 
 	//shorthand for the correct buffer to store the received byte
-	receivePackage buffer;
-	buffer = this->packageReceiveBuffer[receiveBufferCounter];
+	receivePackage* buffer;
+	buffer = &this->packageReceiveBuffer[this->receiveBufferCounter];
+	//the shorthand: buffer->packageLength   is equal to (*buffer).packageLength; //https://stackoverflow.com/questions/22921998/error-request-for-member-size-in-a-which-is-of-pointer-type-but-i-didnt
 
-	if(buffer.packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
+
+	printf ("char received: %02X\r\n", receivedByte);
+
+	if( buffer->packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
 		//buffer overflow
 		printf("program buffer is %d, XBEE package length is up to 65535 + 3 bytes. --> Overflow, will reset buffer.", RECEIVE_BUFFER_SIZE);
-		buffer.packageRecordPosition = 0;
-		buffer.packageRecording = false;
-		buffer.packageLength = 0;
-		buffer.packageRecordBuffer[0]='\0';
+		buffer->packageRecordPosition = 0;
+		buffer->packageRecording = false;
+		buffer->packageLength = 0;
+		buffer->packageData[0]='\0';
 	}
 
-	if (buffer.packageRecordPosition > buffer.packageLength + 5){
+	if (buffer->packageRecordPosition > buffer->packageLength + 5){
 		printf("ASSERT error: error in communication, package is longer than indicated. Will reset buffer.");
-		buffer.packageRecordPosition = 0;
-		buffer.packageRecording = false;
-		buffer.packageLength = 0;
-		buffer.packageRecordBuffer[0]='\0';
+		buffer->packageRecordPosition = 0;
+		buffer->packageRecording = false;
+		buffer->packageLength = 0;
+		buffer->packageData[0]='\0';
 
 	}else if (receivedByte == 0x7E){
 		//packages are sent in API2 which means 0x7E is always start (
 		//new package
-		buffer.packageLength = 0;
-		buffer.packageRecording = true;
-		buffer.packageRecordPosition = 0;
-		buffer.packageRecordBuffer[0]='\0';
+		buffer->packageLength = 0;
+		buffer->packageRecording = true;
+		buffer->packageRecordPosition = 0;
+		buffer->packageData[0]='\0';
 
-		buffer.packageRecordBuffer[buffer.packageRecordPosition] = receivedByte;
-		buffer.packageRecordPosition ++;
-		buffer.packageRecordBuffer[buffer.packageRecordPosition]='\0';
+		buffer->packageData[buffer->packageRecordPosition] = receivedByte;
+		buffer->packageRecordPosition ++;
+		buffer->packageData[buffer->packageRecordPosition]='\0';
 
 		printf ("new package\r\n");
 
 
-	}else if (buffer.packageRecording ){
-		//record package
-
-		buffer.packageRecordBuffer[buffer.packageRecordPosition] = receivedByte;
-		buffer.packageRecordPosition ++;
-		buffer.packageRecordBuffer[buffer.packageRecordPosition]='\0';
+	}else if (buffer->packageRecording ){
+		//record byte
+		buffer->packageData[buffer->packageRecordPosition] = receivedByte;
+		buffer->packageRecordPosition ++;
+		buffer->packageData[buffer->packageRecordPosition]='\0';
 
 		//when length bytes are received, they are used to check when the package is received completely.
-		if (buffer.packageRecordPosition == 3){
-			buffer.packageLength = buffer.packageRecordBuffer[1]<<8 | buffer.packageRecordBuffer[2]; //this->packageLength = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
+		if (buffer->packageRecordPosition == 3){
+			buffer->packageLength = buffer->packageData[1]<<8 | buffer->packageData[2]; //this->packageLength = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
 		}
-		if (buffer.packageRecordPosition == buffer.packageLength + 5){
+		if (buffer->packageRecordPosition == buffer->packageLength + 5){
 			printf("full package received \r\n");
-			buffer.packageRecording = false;
-			printf ("tmp  %02X\r\n",buffer.packageRecordBuffer[buffer.packageRecordPosition-1]);
+			buffer->packageRecording = false;
+			printf ("tmp  %02X\r\n",buffer->packageData[buffer->packageRecordPosition-1]);
 		}
 
 	}else {
-		printf ("stray char received: %02X\r\n");
+		printf ("stray char received: %02X\r\n",receivedByte);
 	}
 }
 
