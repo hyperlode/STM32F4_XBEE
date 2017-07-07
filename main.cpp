@@ -150,7 +150,8 @@ int main(void)
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
-						radio.receiveBuffer_Readout_Flush();
+						//radio.receiveBuffer_Readout_Flush();
+						radio.readReceivedLocalPackage();
 					}else{
 						printf("Invalid command received.\r\n"
 								"available commands:\r\n"
