@@ -349,20 +349,15 @@ void OTG_FS_WKUP_IRQHandler(void)
 
 #endif
 
-
-
 //XBEE UART receive interrupt handler, handle as c code.
 void USART1_IRQHandler()
 {
 	if (USART_GetITStatus(USART1, USART_IT_RXNE)){
-		char c = USART1->DR;
-		pRadio->receiveInterruptHandler	( c );
-		//printf(" %c",c);
+		pRadio->receiveInterruptHandler	( USART1->DR );
+		//after handling, reenable interrupts
 		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
 	}
 }
-
-
 
 #ifdef __cplusplus
  }

@@ -2,7 +2,7 @@
 #include "XBEE.h"
 
 XBEE::XBEE(){
-	
+	receiveBufferCounter = 0;
 }
 
 void XBEE::init(uint8_t UART_Number, uint32_t baud){
@@ -88,7 +88,7 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 		printf("ASSERT ERROR invalid value. Please select or configure valid USART");
 	}
 }
-
+/*
 void XBEE::receiveBuffer_Readout_Flush(){
 	//http://rubenlaguna.com/wp/2009/03/12/example-of-xbee-api-frames/
 	//printf("buffer: %s\r\n", receiveBuffer);
@@ -100,12 +100,12 @@ void XBEE::receiveBuffer_Readout_Flush(){
 	receiveBufferOverflow = false;
 	receiveBufferPosition = 0;
 }
-
+*/
 
 void XBEE::readReceivedLocalPackage(){
-	for (uint8_t i = 0; i< this->packageRecordPosition; i++)
+	for (uint8_t i = 0; i< this->packageReceiveBuffer[receiveBufferCounter].packageRecordPosition; i++)
 	{
-		printf("%02X ", this->receiveBuffer[i]);
+		printf("%02X ", packageReceiveBuffer[receiveBufferCounter].packageRecordBuffer[i]);
 	}
 	//this->receiveBufferOverflow = false;
 	//this->packageRecordPosition = 0;
@@ -135,73 +135,94 @@ void XBEE::unescapeAPIFrame(){
 		}
 }
 */
+/*
+bool XBEE::apiFrameIsValid(char* frame){
+	//copy to buffer
+
+	//checksum on unescaped frame.
+//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
+		//test checksum:
+		uint32_t sum = 0;
+		for(uint16_t i=0;i<this->packageLength;i++){
+			//sum += this->receiveBuffer[i+3];
+			sum = sum + this->receiveBuffer[i+3];
+			printf("checksum + %08x: %08X\r\n", this->receiveBuffer[i+3],sum);
+			//checksum + last 8 bits must be FF.
+		}
+}
+/**/
+/*
+
+void XBEE::unescapeAPIFrame(char* frame){
+
+}
+
+void XBEE::escapeAPIFrame(char* frame){
+
+}
+
+void XBEE::sendLocalPackage(){
+}
+*/
 
 void XBEE::receiveLocalPackage(char receivedByte){
 	//check if byte part of api package
 
-	if(this->packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
+	//shorthand for the correct buffer to store the received byte
+	receivePackage buffer;
+	buffer = this->packageReceiveBuffer[receiveBufferCounter];
+
+	if(buffer.packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
 		//buffer overflow
 		printf("program buffer is %d, XBEE package length is up to 65535 + 3 bytes. --> Overflow, will reset buffer.", RECEIVE_BUFFER_SIZE);
-		this->packageRecordPosition = 0;
-		this->packageRecording = false;
-		this->packageLength = 0;
-		this->receiveBuffer[0]='\0';
+		buffer.packageRecordPosition = 0;
+		buffer.packageRecording = false;
+		buffer.packageLength = 0;
+		buffer.packageRecordBuffer[0]='\0';
 	}
 
-	if (this->packageRecordPosition > this->packageLength + 5){
+	if (buffer.packageRecordPosition > buffer.packageLength + 5){
 		printf("ASSERT error: error in communication, package is longer than indicated. Will reset buffer.");
-		this->packageRecordPosition = 0;
-		this->packageRecording = false;
-		this->packageLength = 0;
-		this->receiveBuffer[0]='\0';
+		buffer.packageRecordPosition = 0;
+		buffer.packageRecording = false;
+		buffer.packageLength = 0;
+		buffer.packageRecordBuffer[0]='\0';
 
 	}else if (receivedByte == 0x7E){
-		//package are sent in API2 which means 0x7E is always start (
+		//packages are sent in API2 which means 0x7E is always start (
 		//new package
-		this->packageLength = 0;
-		this->packageRecording = true;
-		this->packageRecordPosition = 0;
-		this->receiveBuffer[0]='\0';
+		buffer.packageLength = 0;
+		buffer.packageRecording = true;
+		buffer.packageRecordPosition = 0;
+		buffer.packageRecordBuffer[0]='\0';
 
-		this->receiveBuffer[this->packageRecordPosition] = receivedByte;
-		this->packageRecordPosition ++;
-		this->receiveBuffer[this->packageRecordPosition]='\0';
+		buffer.packageRecordBuffer[buffer.packageRecordPosition] = receivedByte;
+		buffer.packageRecordPosition ++;
+		buffer.packageRecordBuffer[buffer.packageRecordPosition]='\0';
 
 		printf ("new package\r\n");
 
 
-	}else if (this->packageRecording ){
+	}else if (buffer.packageRecording ){
 		//record package
 
-		this->receiveBuffer[this->packageRecordPosition] = receivedByte;
-		this->packageRecordPosition ++;
-		this->receiveBuffer[this->packageRecordPosition]='\0';
-/*
-		if (this->packageRecordPosition == 2){
-			this->receiveBuffer[1] = 0x01;
-		}
-		*/
-		if (this->packageRecordPosition == 3){
+		buffer.packageRecordBuffer[buffer.packageRecordPosition] = receivedByte;
+		buffer.packageRecordPosition ++;
+		buffer.packageRecordBuffer[buffer.packageRecordPosition]='\0';
 
-			this->packageLength = this->receiveBuffer[1]<<8 | this->receiveBuffer[2]; //this->packageLength = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
-			//printf ("length known: %d\r\n",this->packageLength);
-			//printf ("tmp  %d\r\n",this->receiveBuffer[2]);
+		//when length bytes are received, they are used to check when the package is received completely.
+		if (buffer.packageRecordPosition == 3){
+			buffer.packageLength = buffer.packageRecordBuffer[1]<<8 | buffer.packageRecordBuffer[2]; //this->packageLength = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
 		}
-		if (this->packageRecordPosition == this->packageLength + 5){
+		if (buffer.packageRecordPosition == buffer.packageLength + 5){
 			printf("full package received \r\n");
-			printf ("tmp  %02X\r\n",this->receiveBuffer[this->packageRecordPosition-1]);
-
+			buffer.packageRecording = false;
+			printf ("tmp  %02X\r\n",buffer.packageRecordBuffer[buffer.packageRecordPosition-1]);
 		}
-
-		//check for package end.
-
-		//this->packageRecording = false;
 
 	}else {
 		printf ("stray char received: %02X\r\n");
 	}
-
-
 }
 
 /*
