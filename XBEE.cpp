@@ -3,6 +3,12 @@
 
 XBEE::XBEE(){
 	receiveBufferCounter = 0;
+	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
+		this->packageReceiveBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
+		this->packageReceiveBufferIsLocked[i] = false;
+	}
+
+
 }
 
 void XBEE::init(uint8_t UART_Number, uint32_t baud){
@@ -102,12 +108,15 @@ void XBEE::receiveBuffer_Readout_Flush(){
 }
 */
 
-void XBEE::readReceivedLocalPackage(){
+
+
+
+void XBEE::readReceivedLocalPackage(uint8_t receiveBuffer){
 	//packageReceiveBuffer
 
-	for (uint8_t i = 0; i< this->packageReceiveBuffer[this->receiveBufferCounter].packageRecordPosition; i++)
+	for (uint8_t i = 0; i< this->packageReceiveBuffer[receiveBuffer].packageRecordPosition; i++)
 	{
-		printf("%02X ", this->packageReceiveBuffer[this->receiveBufferCounter].packageData[i]);
+		printf("%02X ", this->packageReceiveBuffer[receiveBuffer].packageData[i]);
 	}
 	/*
 	for (uint8_t i = 0; i< this->packageReceiveBuffer[receiveBufferCounter].packageRecordPosition; i++)
@@ -174,20 +183,71 @@ void XBEE::sendLocalPackage(){
 }
 */
 
+void XBEE::processReceivedPackage(){
+
+	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
+	//check if first element is a buffer number that needs to be processed.
+	if (this->packageReceiveBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
+		bufferToProcess = this->packageReceiveBuffersToBeProcessed[0];
+	}
+
+	if (bufferToProcess != NOTHING_TO_BE_PROCESSED){
+		readReceivedLocalPackage((uint8_t)bufferToProcess);
+
+
+		//move all elements one step to the front, make last slot empty.
+		for (uint8_t i=0; i< NUMBER_OF_RECEIVEBUFFERS-1; i++){
+			this->packageReceiveBuffersToBeProcessed[i] = this->packageReceiveBuffersToBeProcessed[i +1];
+		}
+		this->packageReceiveBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
+
+		this->packageReceiveBufferIsLocked[bufferToProcess] =false;
+		printf ("buffer processed and released: %d\r\n",bufferToProcess);
+	}else{
+		printf ("nothing to process... \r\n");
+
+	}
+
+}
+
+
+void XBEE::refresh(){
+	//check if package received.
+
+
+
+	//process
+	processReceivedPackage();
+
+
+}
+
+void XBEE::stats(){
+	printf("receive package stats: \r\n");
+	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
+		printf("buffer: %d, locked?:%d\r\n",i,this->packageReceiveBufferIsLocked[i]);
+	}
+
+	printf("packages to be processed(-1 means 'free'):  \r\n");
+	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
+		printf("slot: %d, buffer:%d\r\n",i,this->packageReceiveBuffersToBeProcessed[i]);
+	}
+
+
+
+}
+
 void XBEE::receiveLocalPackage(char receivedByte){
-	//check if byte part of api package
+	//This is done during the interrupt. keep it short! avoid printf!!
 
 	//shorthand for the correct buffer to store the received byte
 	receivePackage* buffer;
 	buffer = &this->packageReceiveBuffer[this->receiveBufferCounter];
 	//the shorthand: buffer->packageLength   is equal to (*buffer).packageLength; //https://stackoverflow.com/questions/22921998/error-request-for-member-size-in-a-which-is-of-pointer-type-but-i-didnt
 
-
-	printf ("char received: %02X\r\n", receivedByte);
-
 	if( buffer->packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
 		//buffer overflow
-		printf("program buffer is %d, XBEE package length is up to 65535 + 3 bytes. --> Overflow, will reset buffer.", RECEIVE_BUFFER_SIZE);
+		printf("buffer overflowprogram buffer is %d, XBEE package length is up to 65535 + 3 bytes. --> Overflow, will reset buffer.", RECEIVE_BUFFER_SIZE);
 		buffer->packageRecordPosition = 0;
 		buffer->packageRecording = false;
 		buffer->packageLength = 0;
@@ -195,7 +255,8 @@ void XBEE::receiveLocalPackage(char receivedByte){
 	}
 
 	if (buffer->packageRecordPosition > buffer->packageLength + 5){
-		printf("ASSERT error: error in communication, package is longer than indicated. Will reset buffer.");
+		//package length information conflict with number of received bytes
+		printf("ASSERT error: error in communication, package is longer than indicated. Will reset buffer.\r\n");
 		buffer->packageRecordPosition = 0;
 		buffer->packageRecording = false;
 		buffer->packageLength = 0;
@@ -213,7 +274,7 @@ void XBEE::receiveLocalPackage(char receivedByte){
 		buffer->packageRecordPosition ++;
 		buffer->packageData[buffer->packageRecordPosition]='\0';
 
-		printf ("new package\r\n");
+		printf ("new package, store in buffer: %d\r\n", this->receiveBufferCounter);
 
 
 	}else if (buffer->packageRecording ){
@@ -222,47 +283,56 @@ void XBEE::receiveLocalPackage(char receivedByte){
 		buffer->packageRecordPosition ++;
 		buffer->packageData[buffer->packageRecordPosition]='\0';
 
-		//when length bytes are received, they are used to check when the package is received completely.
+		//when length information bytes are received, they are used to check when the package is received completely.
 		if (buffer->packageRecordPosition == 3){
 			buffer->packageLength = buffer->packageData[1]<<8 | buffer->packageData[2]; //this->packageLength = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
 		}
+
+		//end of package
 		if (buffer->packageRecordPosition == buffer->packageLength + 5){
 			printf("full package received \r\n");
 			buffer->packageRecording = false;
-			printf ("tmp  %02X\r\n",buffer->packageData[buffer->packageRecordPosition-1]);
-		}
 
+
+
+			//add finished package to list of packages to be processed
+			uint8_t i =0;
+			while (this->packageReceiveBuffersToBeProcessed[i] != NOTHING_TO_BE_PROCESSED && i<NUMBER_OF_RECEIVEBUFFERS){
+				i++;
+			}
+
+			if (i>= NUMBER_OF_RECEIVEBUFFERS){
+				printf("unprocessed overflow error: all package process buffers are full. package will be neglected.");
+
+			}else{
+
+				this->packageReceiveBuffersToBeProcessed[i] =this->receiveBufferCounter;
+				this->packageReceiveBufferIsLocked[this->receiveBufferCounter] = true;
+
+
+				//next buffer activate
+				this->receiveBufferCounter++;
+
+				if (this->receiveBufferCounter >= NUMBER_OF_RECEIVEBUFFERS){
+					this->receiveBufferCounter = 0;
+					printf("%d\r\n" ,this->receiveBufferCounter );
+				}
+
+				printf("%d\r\n" ,this->packageReceiveBufferIsLocked[this->receiveBufferCounter] );
+				//check if next buffer is free
+				if (this->packageReceiveBufferIsLocked[this->receiveBufferCounter] ){
+					printf("unprocessed overflow ERROR: all package buffers full, wait with sending... \r\n "); //todo
+				}
+			}
+
+
+
+		}
 	}else {
 		printf ("stray char received: %02X\r\n",receivedByte);
 	}
 }
 
-/*
-void XBEE::receiveBuffer_writeByte(char receivedByte){
-	if (this->receiveBufferPosition >= RECEIVE_BUFFER_SIZE ){
-		//check overflow
-		if (!receiveBufferOverflow){
-			printf("serial buffer overflow, max chars: %d. \r\n", RECEIVE_BUFFER_SIZE);
-
-		}
-		receiveBufferOverflow = true;
-		receiveBufferPosition = 0;
-		
-	
-	}else if (!receiveBufferOverflow){
-		//record char in buffer
-		receiveBuffer[receiveBufferPosition] = receivedByte;
-		receiveBufferPosition ++;
-		receiveBuffer[receiveBufferPosition]='\0';
-		printf("buffer: %d, %c\r\n", receiveBufferPosition, receivedByte);
-		if (receivedByte == 0x7E){
-			printf("tilde");
-		}
-	}
-	
-	
-}
-*/
 
 bool XBEE::byteIsAvailable(){
 	printf("ahoi");

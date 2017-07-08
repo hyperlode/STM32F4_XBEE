@@ -129,7 +129,10 @@ int main(void)
 	//refresh machine control loop
 	while(1){
 
+		//refresh XPEE
+		//radio.refresh();
 
+		//handle commands over
 		//serial connection VCP (USB)
 		uint8_t theByte;
 		if (VCP_get_char(&theByte)){
@@ -151,12 +154,15 @@ int main(void)
 						printf("lode command!");
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();
-						radio.readReceivedLocalPackage();
+						radio.stats();
+					}else if (stringsAreEqual(serialBuffer, "process")){
+						radio.processReceivedPackage();
 					}else{
 						printf("Invalid command received.\r\n"
 								"available commands:\r\n"
-								"\txbee: Shows xbee buffer\r\n"
-								"\tlode: Displays nonsense...\r\n");
+								"\txbee: Shows xbee receive statistics\r\n"
+								"\tlode: Displays nonsense...\r\n"
+							"\tprocess: Process last received package \r\n");
 					}
 
 					serialBufferPosition =0;

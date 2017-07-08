@@ -8,10 +8,10 @@
 #include <stdio.h>
 
 #define RECEIVE_BUFFER_SIZE 100
-#define NUMBER_OF_RECEIVEBUFFERS 1
+#define NUMBER_OF_RECEIVEBUFFERS 3
 
 #define API_MODE 2 //ASSUME API2 is used (escape functionality built in).
-
+#define NOTHING_TO_BE_PROCESSED -1
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
 
 
@@ -21,7 +21,7 @@ struct message{
 	uint32_t address;
 	uint16_t command;
 	uint32_t id;
-	uint32_t  arguments [256];
+	uint8_t  arguments [64]; //64bytes payload
 };
 
 struct receivePackage{
@@ -46,23 +46,23 @@ public:
 	
 	void receiveBuffer_writeByte(char receivedByte);
 	void receiveLocalPackage(char receivedByte);
-	void readReceivedLocalPackage();
+	void readReceivedLocalPackage(uint8_t receiveBuffer);
 	void receiveBuffer_Readout_Flush();
-	
+	void processReceivedPackage();
+	void refresh();
+	void stats();
 	bool byteIsAvailable();
 
 
 private:
 	uint32_t baud;
-/*
-	uint32_t receiveBufferPosition = 0;
-	bool receiveBufferOverflow = false;
-	receivePackage bufferA;
-	*/
-	//char receiveBuffer[RECEIVE_BUFFER_SIZE+1];
-	uint16_t receiveBufferCounter =0;
+
+	uint8_t receiveBufferCounter =0;
+	uint16_t receiveMessageCounter = 0;
+
+	bool packageReceiveBufferIsLocked [NUMBER_OF_RECEIVEBUFFERS];
+	int16_t  packageReceiveBuffersToBeProcessed [NUMBER_OF_RECEIVEBUFFERS];
 	receivePackage packageReceiveBuffer [NUMBER_OF_RECEIVEBUFFERS];
-	//receivePackage packageReceiveBuffer ;
 	
 };
 
