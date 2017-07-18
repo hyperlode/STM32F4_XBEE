@@ -33,7 +33,6 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 		*/
 		
 		
-		
 		if (!baud) {
 			baud = 9600;
 			printf("Warning! No baud set for usart1! (setting to 9600bps\n");
@@ -108,7 +107,12 @@ void XBEE::receiveBuffer_Readout_Flush(){
 }
 */
 
+void XBEE::sendPackage(){
+	//test for tx.
+	 while(!(USART1->SR & USART_SR_TXE));
+	 USART1->DR = 'A';
 
+}
 
 
 void XBEE::readReceivedLocalPackage(receivePackage* package){
@@ -133,7 +137,7 @@ void XBEE::readReceivedLocalPackage(receivePackage* package){
 
 bool XBEE::apiFrameIsValid(receivePackage* package){
 	//test checksum
-	//checksum + (last 8 bits of sum of payload bytes must be FF)
+	//sum of payload + (last 8 bits of sum of frame bytes must be FF)
 	//checksum on unescaped frame.
 	//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
 
@@ -144,19 +148,18 @@ bool XBEE::apiFrameIsValid(receivePackage* package){
 		sum = sum + package->packageData[i +FRAME_PAYLOAD_STARTINDEX ];
 		//checksum + last 8 bits must be FF.
 	}
-	sum = sum & 0x000000FF;
+	sum = sum & 0x000000FF; //only last byte is considered.
 
-	printf(" is checksumSent + sum =  %01x + %01x ==FF??\r\n", package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength],sum);
+	//printf(" is checksumSent + sum =  %01x + %01x ==FF??\r\n", package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength],sum);
 	if (sum + package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength] & 0x000000FF == 0x000000FF){
-		printf("checksum correct\r\n");
+		//printf("checksum correct\r\n");
 		return true;
 	}else{
-		printf("checksum not correct\r\n");
+		printf("RECEIVE ERROR: Checksum not correct\r\n");
 		return false;
 	}
 
 }
-
 
 /*
 void XBEE::escapeAPIFrame(char* frame){
@@ -199,12 +202,8 @@ void XBEE::processReceivedPackage(){
 void XBEE::refresh(){
 	//check if package received.
 
-
-
 	//process
 	processReceivedPackage();
-
-
 }
 
 void XBEE::stats(){
@@ -217,8 +216,6 @@ void XBEE::stats(){
 	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
 		printf("slot: %d, buffer:%d\r\n",i,this->packageReceiveBuffersToBeProcessed[i]);
 	}
-
-
 
 }
 

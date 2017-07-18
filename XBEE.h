@@ -8,13 +8,14 @@
 #include <stdio.h>
 
 #define RECEIVE_BUFFER_SIZE 100
+#define SEND_BUFFER_SIZE RECEIVE_BUFFER_SIZE
 #define NUMBER_OF_RECEIVEBUFFERS 3
 #define FRAME_PAYLOAD_STARTINDEX 3
 
-
-#define API_MODE 2 //ASSUME API2 is used (escape functionality built in).
-#define NOTHING_TO_BE_PROCESSED -1
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
+#define API_MODE 2 //ASSUME API2 is used (escape functionality built in). No other mode available.
+#define NOTHING_TO_BE_PROCESSED -1
+
 
 //xbee frame types
 #define XBEE_FRAME_TYPE_RECEIVE_PACKET 'x\90'
@@ -38,6 +39,10 @@ struct receivePackage{
 	uint32_t packageLength = 0;
 };
 
+struct sendPackage{
+	char payload[SEND_BUFFER_SIZE+1];
+	char packageData[SEND_BUFFER_SIZE+1];
+};
 
 
 
@@ -54,6 +59,7 @@ public:
 	void readReceivedLocalPackage(receivePackage* package);
 	bool apiFrameIsValid(receivePackage* package);
 	void receiveBuffer_Readout_Flush();
+	void sendPackage();
 	void processReceivedPackage();
 	void unescapeAPIFrame(receivePackage* package);
 	void refresh();

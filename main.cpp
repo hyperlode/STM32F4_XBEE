@@ -152,6 +152,8 @@ int main(void)
 					//interprete command
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
+					}else if (stringsAreEqual(serialBuffer, "txtest")){
+						radio.sendPackage();
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();
 						radio.stats();
@@ -161,6 +163,7 @@ int main(void)
 						printf("Invalid command received.\r\n"
 								"available commands:\r\n"
 								"\txbee: Shows xbee receive statistics\r\n"
+								"\ttxtest: send data to xbee test\r\n"
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");
 					}
