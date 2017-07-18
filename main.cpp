@@ -153,7 +153,16 @@ int main(void)
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
 					}else if (stringsAreEqual(serialBuffer, "txtest")){
-						radio.sendBuffer();
+
+						//uint8_t test []= {0x10, 0x01, 0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
+						frameData tmp;
+						tmp.length = 20;
+
+						for (uint8_t i = 0;i< tmp.length;i++){
+							tmp.data[i] = testData[i];
+						}
+						radio.buildFrame(&tmp);
+
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();
 						radio.stats();

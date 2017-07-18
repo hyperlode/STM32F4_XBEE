@@ -107,22 +107,7 @@ void XBEE::receiveBuffer_Readout_Flush(){
 }
 */
 
-void XBEE::sendBuffer(){
 
-	uint32_t length = 26;
-	//\x5A' is of type char, while 0x5A is of type int.
-	//uint8_t test []= {0x7E,0x00,0x1D};
-	uint8_t test []= {0x7E, 0x00, 0x14, 0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x7D, 0x5E};
-
-	for (uint32_t i=0; i< length; i++){
-		sendByte(test[i]);
-	}
-}
-void XBEE::sendByte(uint8_t byteToSend){
-	//test for tx.
-	 while(!(USART1->SR & USART_SR_TXE));
-	 USART1->DR = byteToSend;
-}
 
 void XBEE::readReceivedLocalPackage(receivePackage* package){
 	//packageReceiveBuffer
@@ -152,13 +137,14 @@ bool XBEE::apiFrameIsValid(receivePackage* package){
 
 	printf("package length: %d", package->packageLength);
 	printf("first byte: %02xbla\r\n", package->packageData[0]);
-	uint32_t sum = 0;
-	for(uint16_t i=0;i<package->packageLength;i++){
-		sum = sum + package->packageData[i +FRAME_PAYLOAD_STARTINDEX ];
-		//checksum + last 8 bits must be FF.
+	if ( calculateCheckSum((uint8_t*)package->packageData, FRAME_PAYLOAD_STARTINDEX, package->packageLength) == package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength]){
+		printf("RECEIVE ERROR: Checksum correct\r\n");
+		return true;
+	}else{
+		printf("RECEIVE ERROR: Checksum not correct\r\n");
+				return false;
 	}
-	sum = sum & 0x000000FF; //only last byte is considered.
-
+/*
 	//printf(" is checksumSent + sum =  %01x + %01x ==FF??\r\n", package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength],sum);
 	if (sum + package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength] & 0x000000FF == 0x000000FF){
 		//printf("checksum correct\r\n");
@@ -167,13 +153,23 @@ bool XBEE::apiFrameIsValid(receivePackage* package){
 		printf("RECEIVE ERROR: Checksum not correct\r\n");
 		return false;
 	}
+*/
+}
 
+uint8_t XBEE::calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length){
+	//
+	uint32_t sum = 0;
+	for(uint16_t i=0;i<length;i++){
+		sum = sum + bytes[i + startIndex];
+		//checksum + last 8 bits must be FF.
+	}
+
+	sum = sum & 0x000000FF; //only last byte is considered.
+	return 0xFF - sum;
 }
 
 /*
-void XBEE::escapeAPIFrame(char* frame){
 
-}
 
 void XBEE::sendLocalPackage(){
 }
@@ -227,7 +223,130 @@ void XBEE::stats(){
 	}
 
 }
+// ------------------------------------------------------------
+//  XBEE send
+// ------------------------------------------------------------
 
+/**/
+void XBEE::buildFrame(frameData* frameData){
+
+	//lock the xbee until message sent, or timeout
+	sendingFrameIsBusy = true;
+
+	//frameToSend = {};  //reset //https://stackoverflow.com/questions/15183429/c-completely-erase-or-reset-all-values-of-a-struct
+	//uint8_t test []= {0x7E, 0x00, 0x14, 0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x7D, 0x5E};//complete frame API2
+	//uint8_t test []= {0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36}; //escaped
+	//uint8_t test []= {0x10, 0x01, 0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
+
+
+
+	frameToSend.frame[0] = 0x7E;
+	frameToSend.frame[1] = frameData->length >>8;
+	frameToSend.frame[2] = frameData->length & 0xFF; //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
+
+	uint16_t buildFrameIndex = 3;
+	for (uint8_t i=0; i<frameData->length; i++){
+
+		//escape frame
+		uint8_t byteToSend = frameData->data[i];
+		frameToSend.frame[buildFrameIndex] = frameData->data[i];
+		buildFrameIndex++;
+
+	}
+
+	//add checksum
+	frameToSend.frame[buildFrameIndex] = calculateCheckSum((uint8_t*)frameData->data, 0 ,frameData->length);
+
+	frameToSend.length = frameData->length + 4;
+
+
+	//escape frame
+	frameToSend.lengthEscaped = frameToSend.length; //add bytes each time a character is escaped
+	frameToSend.frameEscaped[0] = 0x7E;
+	buildFrameIndex = 1;
+	for (uint8_t i=1; i<frameToSend.length; i++){
+
+		uint8_t byteToSend = frameToSend.frame[i];
+		printf("byte: %02x \r\n",byteToSend);
+
+		if (byteToSend == 0x11|| byteToSend == 0x13 || byteToSend == 0x7E || byteToSend == 0x7D){
+			frameToSend.lengthEscaped++;
+			frameToSend.frameEscaped[buildFrameIndex] = 0x7D;
+			buildFrameIndex++;
+			frameToSend.frameEscaped[buildFrameIndex] = byteToSend ^ 0x20;
+			/*
+				if (frameData->data[i] == 0x11 ){
+
+					frameToSend.frame[buildFrameIndex] = 0x31;
+				} else if (frameData->data[i] == 0x13 ){
+					frameToSend.frame[buildFrameIndex] = 0x33;
+
+				} else if (frameData->data[i] == 0x7E ){
+					frameToSend.frame[buildFrameIndex] = 0x5E;
+
+				} else if (frameData->data[i] == 0x7D ){
+					frameToSend.frame[buildFrameIndex] = 0x5D;
+
+				}
+				*/
+				printf("esc! %d",i);
+		}else{
+			frameToSend.frameEscaped[buildFrameIndex] = frameToSend.frame[i];
+		}
+		buildFrameIndex++;
+
+	}
+
+	printf("frame unescaped.\r\n");
+			for (uint8_t i = 0; i< frameToSend.length;i++){
+				printf("%02x ", frameToSend.frame[i]);
+
+			}
+	printf("\r\nframe built.\r\n");
+		for (uint8_t i = 0; i< frameToSend.lengthEscaped;i++){
+			printf("%02x ", frameToSend.frameEscaped[i]);
+
+		}
+
+
+	sendFrame(&frameToSend);
+
+
+
+}
+/**/
+
+
+
+void XBEE::sendFrame(frame* frame){
+
+	for (uint32_t i=0; i< frameToSend.lengthEscaped; i++){
+		sendByte(frame->frameEscaped[i]);
+	}
+}
+
+void XBEE::sendBuffer(){
+
+	uint32_t length = 26;
+	//\x5A' is of type char, while 0x5A is of type int.
+	//uint8_t test []= {0x7E,0x00,0x1D};
+	uint8_t test []= {0x7E, 0x00, 0x14, 0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x7D, 0x5E};
+
+	for (uint32_t i=0; i< length; i++){
+		sendByte(test[i]);
+	}
+}
+
+void XBEE::sendByte(uint8_t byteToSend){
+	//test for tx.
+	 while(!(USART1->SR & USART_SR_TXE));
+	 USART1->DR = byteToSend;
+}
+
+
+// ------------------------------------------------------------
+//  XBEE receive
+// ------------------------------------------------------------
 void XBEE::receiveLocalPackage(char receivedByte){
 	//This is done during the interrupt. keep it short! avoid printf!!
 	//printf("+++ %02X ", receivedByte);

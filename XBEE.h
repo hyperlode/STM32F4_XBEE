@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #define RECEIVE_BUFFER_SIZE 100
+#define NUMBER_OF_SENDBUFFERS 3
 #define SEND_BUFFER_SIZE RECEIVE_BUFFER_SIZE
 #define NUMBER_OF_RECEIVEBUFFERS 3
 #define FRAME_PAYLOAD_STARTINDEX 3
@@ -39,9 +40,22 @@ struct receivePackage{
 	uint32_t packageLength = 0;
 };
 
-struct sendPackage{
+struct frame{
 	char payload[SEND_BUFFER_SIZE+1];
-	char packageData[SEND_BUFFER_SIZE+1];
+	uint8_t frame[SEND_BUFFER_SIZE+1]; //packageData
+	uint8_t frameEscaped[SEND_BUFFER_SIZE+1];
+	uint16_t length = 0;
+	uint16_t lengthEscaped = 0;
+};
+
+
+//http://docs.digi.com/display/RFKitsCommon/Frame+structure
+struct frameData{
+	uint16_t length = 0;
+	uint8_t frameType;
+	uint8_t data [RECEIVE_BUFFER_SIZE+1];
+	uint8_t destinationAddress [8];
+
 };
 
 
@@ -61,12 +75,15 @@ public:
 	void receiveBuffer_Readout_Flush();
 	void sendPackage(char charToSend);
 	void sendBuffer();
+	void sendFrame(frame* frame);
 	void sendByte(uint8_t byteToSend);
 	void processReceivedPackage();
 	void unescapeAPIFrame(receivePackage* package);
 	void refresh();
 	void stats();
 	bool byteIsAvailable();
+	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
+	void buildFrame(frameData* frameData);
 
 
 private:
@@ -80,7 +97,16 @@ private:
 	bool packageReceiveBufferIsLocked [NUMBER_OF_RECEIVEBUFFERS];
 	int16_t  packageReceiveBuffersToBeProcessed [NUMBER_OF_RECEIVEBUFFERS];
 	receivePackage packageReceiveBuffer [NUMBER_OF_RECEIVEBUFFERS];
+	receivePackage test;
+
 	
+	bool sendingFrameIsBusy = false;
+	frame frameToSend;
+
+	//sendFrame sendBuffer[NUMBER_OF_SENDBUFFERS];
+	//bool sendBufferIsLocked[NUMBER_OF_SENDBUFFERS];
+	//int16_t sendFramesSequence[NUMBER_OF_SENDBUFFERS];
+
 };
 
 #endif
