@@ -167,7 +167,7 @@ int main(void)
 						//radio.receiveBuffer_Readout_Flush();
 						radio.stats();
 					}else if (stringsAreEqual(serialBuffer, "process")){
-						radio.processReceivedPackage();
+						radio.processReceivedFrame();
 					}else{
 						printf("Invalid command received.\r\n"
 								"available commands:\r\n"

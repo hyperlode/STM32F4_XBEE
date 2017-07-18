@@ -31,12 +31,12 @@ struct message{
 	uint8_t  arguments [64]; //64bytes payload
 };
 
-struct receivePackage{
+struct frameReceive{
 	uint32_t packageRecordPosition = 0;
 	bool packageRecording = false;
 	char packageData[RECEIVE_BUFFER_SIZE+1];
 	char payload[RECEIVE_BUFFER_SIZE+1];
-	bool escapeNextChar = false;
+
 	uint32_t packageLength = 0;
 };
 
@@ -65,25 +65,28 @@ class XBEE{
 public:
 	XBEE();
 	void init(uint8_t UART_Number, uint32_t baud);
-	
-	void receiveInterruptHandler(char c);
-	
-	void receiveBuffer_writeByte(char receivedByte);
-	void receiveLocalPackage(char receivedByte);
-	void readReceivedLocalPackage(receivePackage* package);
-	bool apiFrameIsValid(receivePackage* package);
-	void receiveBuffer_Readout_Flush();
-	void sendPackage(char charToSend);
-	void sendBuffer();
-	void sendFrame(frame* frame);
-	void sendByte(uint8_t byteToSend);
-	void processReceivedPackage();
-	void unescapeAPIFrame(receivePackage* package);
 	void refresh();
 	void stats();
-	bool byteIsAvailable();
+
+
+	
+	void receiveFrame(char receivedByte);
+	void readReceivedFrame(frameReceive* package);
+	void receiveInterruptHandler(char c);
+	void processReceivedFrame();
+
+	
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
+	bool apiFrameIsValid(frameReceive* package);
+
+	void sendPackage(char charToSend);
+	void sendTest();
+	void sendFrame(frame* frame);
+	void sendByte(uint8_t byteToSend);
+
 	void buildFrame(frameData* frameData);
+
+
 
 
 private:
@@ -94,18 +97,15 @@ private:
 
 	bool unescapeNextReceivedByte = false;
 
-	bool packageReceiveBufferIsLocked [NUMBER_OF_RECEIVEBUFFERS];
-	int16_t  packageReceiveBuffersToBeProcessed [NUMBER_OF_RECEIVEBUFFERS];
-	receivePackage packageReceiveBuffer [NUMBER_OF_RECEIVEBUFFERS];
-	receivePackage test;
+	bool receiveFrameBuffersIsLocked [NUMBER_OF_RECEIVEBUFFERS];
+	int16_t receiveFrameBuffersToBeProcessed [NUMBER_OF_RECEIVEBUFFERS];
+	frameReceive receiveFrameBuffers [NUMBER_OF_RECEIVEBUFFERS];
+	frameReceive test;
 
 	
 	bool sendingFrameIsBusy = false;
 	frame frameToSend;
 
-	//sendFrame sendBuffer[NUMBER_OF_SENDBUFFERS];
-	//bool sendBufferIsLocked[NUMBER_OF_SENDBUFFERS];
-	//int16_t sendFramesSequence[NUMBER_OF_SENDBUFFERS];
 
 };
 

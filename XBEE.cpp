@@ -4,8 +4,8 @@
 XBEE::XBEE(){
 	receiveBufferCounter = 0;
 	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
-		this->packageReceiveBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
-		this->packageReceiveBufferIsLocked[i] = false;
+		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
+		this->receiveFrameBuffersIsLocked[i] = false;
 	}
 
 
@@ -93,24 +93,10 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 		printf("ASSERT ERROR invalid value. Please select or configure valid USART");
 	}
 }
-/*
-void XBEE::receiveBuffer_Readout_Flush(){
-	//http://rubenlaguna.com/wp/2009/03/12/example-of-xbee-api-frames/
-	//printf("buffer: %s\r\n", receiveBuffer);
-
-	for (uint8_t i = 0; i< receiveBufferPosition; i++)
-	{
-		printf("%02X ", receiveBuffer[i]);
-	}
-	receiveBufferOverflow = false;
-	receiveBufferPosition = 0;
-}
-*/
 
 
-
-void XBEE::readReceivedLocalPackage(receivePackage* package){
-	//packageReceiveBuffer
+void XBEE::readReceivedFrame(frameReceive* package){
+	//receiveFrameBuffers
 
 	for (uint8_t i = 0; i< package->packageRecordPosition; i++)
 	{
@@ -129,7 +115,7 @@ void XBEE::readReceivedLocalPackage(receivePackage* package){
 	//this->packageRecording = false;
 }
 
-bool XBEE::apiFrameIsValid(receivePackage* package){
+bool XBEE::apiFrameIsValid(frameReceive* package){
 	//test checksum
 	//sum of payload + (last 8 bits of sum of frame bytes must be FF)
 	//checksum on unescaped frame.
@@ -175,11 +161,11 @@ void XBEE::sendLocalPackage(){
 }
 */
 
-void XBEE::processReceivedPackage(){
+void XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
 	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
-	if (this->packageReceiveBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
-		bufferToProcess = this->packageReceiveBuffersToBeProcessed[0];
+	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
+		bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
 	}else{
 		printf ("nothing to process... \r\n");
 		return;
@@ -187,17 +173,17 @@ void XBEE::processReceivedPackage(){
 
 	//process package
 
-	readReceivedLocalPackage(&this->packageReceiveBuffer[bufferToProcess]);
-	apiFrameIsValid(&this->packageReceiveBuffer[bufferToProcess]);
+	readReceivedFrame(&this->receiveFrameBuffers[bufferToProcess]);
+	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
 
 	//delete package
 	//move all elements one step to the front, make last slot empty.
 	for (uint8_t i=0; i< NUMBER_OF_RECEIVEBUFFERS-1; i++){
-		this->packageReceiveBuffersToBeProcessed[i] = this->packageReceiveBuffersToBeProcessed[i+1];
+		this->receiveFrameBuffersToBeProcessed[i] = this->receiveFrameBuffersToBeProcessed[i+1];
 	}
-	this->packageReceiveBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
+	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
 
-	this->packageReceiveBufferIsLocked[bufferToProcess] =false;
+	this->receiveFrameBuffersIsLocked[bufferToProcess] =false;
 	printf ("buffer processed and released: %d\r\n", bufferToProcess);
 
 
@@ -208,26 +194,25 @@ void XBEE::refresh(){
 	//check if package received.
 
 	//process
-	processReceivedPackage();
+	processReceivedFrame();
 }
 
 void XBEE::stats(){
 	printf("receive package stats: \r\n");
 	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
-		printf("buffer: %d, locked?:%d\r\n",i,this->packageReceiveBufferIsLocked[i]);
+		printf("buffer: %d, locked?:%d\r\n",i,this->receiveFrameBuffersIsLocked[i]);
 	}
 
 	printf("packages to be processed(-1 means 'free'):  \r\n");
 	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
-		printf("slot: %d, buffer:%d\r\n",i,this->packageReceiveBuffersToBeProcessed[i]);
+		printf("slot: %d, buffer:%d\r\n",i,this->receiveFrameBuffersToBeProcessed[i]);
 	}
-
 }
+
 // ------------------------------------------------------------
 //  XBEE send
 // ------------------------------------------------------------
 
-/**/
 void XBEE::buildFrame(frameData* frameData){
 
 	//lock the xbee until message sent, or timeout
@@ -238,27 +223,22 @@ void XBEE::buildFrame(frameData* frameData){
 	//uint8_t test []= {0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36}; //escaped
 	//uint8_t test []= {0x10, 0x01, 0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
 
-
-
 	frameToSend.frame[0] = 0x7E;
 	frameToSend.frame[1] = frameData->length >>8;
 	frameToSend.frame[2] = frameData->length & 0xFF; //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
 
 	uint16_t buildFrameIndex = 3;
 	for (uint8_t i=0; i<frameData->length; i++){
-
 		//escape frame
 		uint8_t byteToSend = frameData->data[i];
 		frameToSend.frame[buildFrameIndex] = frameData->data[i];
 		buildFrameIndex++;
-
 	}
 
 	//add checksum
 	frameToSend.frame[buildFrameIndex] = calculateCheckSum((uint8_t*)frameData->data, 0 ,frameData->length);
 
 	frameToSend.length = frameData->length + 4;
-
 
 	//escape frame
 	frameToSend.lengthEscaped = frameToSend.length; //add bytes each time a character is escaped
@@ -289,34 +269,24 @@ void XBEE::buildFrame(frameData* frameData){
 
 				}
 				*/
-				printf("esc! %d",i);
 		}else{
 			frameToSend.frameEscaped[buildFrameIndex] = frameToSend.frame[i];
 		}
 		buildFrameIndex++;
-
 	}
 
+/*
 	printf("frame unescaped.\r\n");
 			for (uint8_t i = 0; i< frameToSend.length;i++){
 				printf("%02x ", frameToSend.frame[i]);
-
 			}
 	printf("\r\nframe built.\r\n");
 		for (uint8_t i = 0; i< frameToSend.lengthEscaped;i++){
 			printf("%02x ", frameToSend.frameEscaped[i]);
-
 		}
-
-
+*/
 	sendFrame(&frameToSend);
-
-
-
 }
-/**/
-
-
 
 void XBEE::sendFrame(frame* frame){
 
@@ -325,7 +295,7 @@ void XBEE::sendFrame(frame* frame){
 	}
 }
 
-void XBEE::sendBuffer(){
+void XBEE::sendTest(){
 
 	uint32_t length = 26;
 	//\x5A' is of type char, while 0x5A is of type int.
@@ -344,15 +314,16 @@ void XBEE::sendByte(uint8_t byteToSend){
 }
 
 
+
 // ------------------------------------------------------------
 //  XBEE receive
 // ------------------------------------------------------------
-void XBEE::receiveLocalPackage(char receivedByte){
+void XBEE::receiveFrame(char receivedByte){
 	//This is done during the interrupt. keep it short! avoid printf!!
 	//printf("+++ %02X ", receivedByte);
 	//shorthand for the correct buffer to store the received byte
-	receivePackage* buffer;
-	buffer = &this->packageReceiveBuffer[this->receiveBufferCounter];
+	frameReceive* buffer;
+	buffer = &this->receiveFrameBuffers[this->receiveBufferCounter];
 	//the shorthand: buffer->packageLength   is equal to (*buffer).packageLength; //https://stackoverflow.com/questions/22921998/error-request-for-member-size-in-a-which-is-of-pointer-type-but-i-didnt
 
 	if( buffer->packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
@@ -425,11 +396,9 @@ void XBEE::receiveLocalPackage(char receivedByte){
 			printf("full package received \r\n");
 			buffer->packageRecording = false;
 
-
-
 			//add finished package to list of packages to be processed
 			uint8_t i =0;
-			while (this->packageReceiveBuffersToBeProcessed[i] != NOTHING_TO_BE_PROCESSED && i<NUMBER_OF_RECEIVEBUFFERS){
+			while (this->receiveFrameBuffersToBeProcessed[i] != NOTHING_TO_BE_PROCESSED && i<NUMBER_OF_RECEIVEBUFFERS){
 				i++;
 			}
 
@@ -437,10 +406,8 @@ void XBEE::receiveLocalPackage(char receivedByte){
 				printf("unprocessed overflow error: all package process buffers are full. package will be neglected.");
 
 			}else{
-
-				this->packageReceiveBuffersToBeProcessed[i] =this->receiveBufferCounter;
-				this->packageReceiveBufferIsLocked[this->receiveBufferCounter] = true;
-
+				this->receiveFrameBuffersToBeProcessed[i] =this->receiveBufferCounter;
+				this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] = true;
 
 				//next buffer activate
 				this->receiveBufferCounter++;
@@ -450,15 +417,12 @@ void XBEE::receiveLocalPackage(char receivedByte){
 					printf("%d\r\n" ,this->receiveBufferCounter );
 				}
 
-				printf("%d\r\n" ,this->packageReceiveBufferIsLocked[this->receiveBufferCounter] );
+				printf("%d\r\n" ,this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] );
 				//check if next buffer is free
-				if (this->packageReceiveBufferIsLocked[this->receiveBufferCounter] ){
-					printf("unprocessed overflow ERROR: all package buffers full, wait with sending... \r\n "); //todo
+				if (this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] ){
+					printf("unprocessed overflow WARNING: all package buffers full, wait with sending... \r\n "); //todo
 				}
 			}
-
-
-
 		}
 	}else {
 		printf ("stray char received: %02X\r\n",receivedByte);
@@ -466,15 +430,10 @@ void XBEE::receiveLocalPackage(char receivedByte){
 }
 
 
-bool XBEE::byteIsAvailable(){
-	printf("ahoi");
 
-}
 
 void XBEE::receiveInterruptHandler(char c){
-	//printf(".%c",c);
-	//this->receiveBuffer_writeByte(c);
-	this->receiveLocalPackage(c);
-	//printf("ahoi");
+	this->receiveFrame(c);
+
 }
 
