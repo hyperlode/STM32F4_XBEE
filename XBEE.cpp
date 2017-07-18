@@ -107,13 +107,22 @@ void XBEE::receiveBuffer_Readout_Flush(){
 }
 */
 
-void XBEE::sendPackage(){
+void XBEE::sendBuffer(){
+
+	uint32_t length = 26;
+	//\x5A' is of type char, while 0x5A is of type int.
+	//uint8_t test []= {0x7E,0x00,0x1D};
+	uint8_t test []= {0x7E, 0x00, 0x14, 0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x7D, 0x5E};
+
+	for (uint32_t i=0; i< length; i++){
+		sendByte(test[i]);
+	}
+}
+void XBEE::sendByte(uint8_t byteToSend){
 	//test for tx.
 	 while(!(USART1->SR & USART_SR_TXE));
-	 USART1->DR = 'A';
-
+	 USART1->DR = byteToSend;
 }
-
 
 void XBEE::readReceivedLocalPackage(receivePackage* package){
 	//packageReceiveBuffer

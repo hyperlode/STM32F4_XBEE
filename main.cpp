@@ -153,7 +153,7 @@ int main(void)
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
 					}else if (stringsAreEqual(serialBuffer, "txtest")){
-						radio.sendPackage();
+						radio.sendBuffer();
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();
 						radio.stats();

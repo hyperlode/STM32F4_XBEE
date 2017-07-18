@@ -59,7 +59,9 @@ public:
 	void readReceivedLocalPackage(receivePackage* package);
 	bool apiFrameIsValid(receivePackage* package);
 	void receiveBuffer_Readout_Flush();
-	void sendPackage();
+	void sendPackage(char charToSend);
+	void sendBuffer();
+	void sendByte(uint8_t byteToSend);
 	void processReceivedPackage();
 	void unescapeAPIFrame(receivePackage* package);
 	void refresh();
