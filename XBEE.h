@@ -9,10 +9,15 @@
 
 #define RECEIVE_BUFFER_SIZE 100
 #define NUMBER_OF_RECEIVEBUFFERS 3
+#define FRAME_PAYLOAD_STARTINDEX 3
+
 
 #define API_MODE 2 //ASSUME API2 is used (escape functionality built in).
 #define NOTHING_TO_BE_PROCESSED -1
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
+
+//xbee frame types
+#define XBEE_FRAME_TYPE_RECEIVE_PACKET 'x\90'
 
 
 
@@ -28,7 +33,7 @@ struct receivePackage{
 	uint32_t packageRecordPosition = 0;
 	bool packageRecording = false;
 	char packageData[RECEIVE_BUFFER_SIZE+1];
-
+	char payload[RECEIVE_BUFFER_SIZE+1];
 	bool escapeNextChar = false;
 	uint32_t packageLength = 0;
 };
@@ -46,9 +51,11 @@ public:
 	
 	void receiveBuffer_writeByte(char receivedByte);
 	void receiveLocalPackage(char receivedByte);
-	void readReceivedLocalPackage(uint8_t receiveBuffer);
+	void readReceivedLocalPackage(receivePackage* package);
+	bool apiFrameIsValid(receivePackage* package);
 	void receiveBuffer_Readout_Flush();
 	void processReceivedPackage();
+	void unescapeAPIFrame(receivePackage* package);
 	void refresh();
 	void stats();
 	bool byteIsAvailable();
@@ -59,6 +66,8 @@ private:
 
 	uint8_t receiveBufferCounter =0;
 	uint16_t receiveMessageCounter = 0;
+
+	bool unescapeNextReceivedByte = false;
 
 	bool packageReceiveBufferIsLocked [NUMBER_OF_RECEIVEBUFFERS];
 	int16_t  packageReceiveBuffersToBeProcessed [NUMBER_OF_RECEIVEBUFFERS];

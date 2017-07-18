@@ -111,70 +111,54 @@ void XBEE::receiveBuffer_Readout_Flush(){
 
 
 
-void XBEE::readReceivedLocalPackage(uint8_t receiveBuffer){
+void XBEE::readReceivedLocalPackage(receivePackage* package){
 	//packageReceiveBuffer
 
-	for (uint8_t i = 0; i< this->packageReceiveBuffer[receiveBuffer].packageRecordPosition; i++)
+	for (uint8_t i = 0; i< package->packageRecordPosition; i++)
 	{
-		printf("%02X ", this->packageReceiveBuffer[receiveBuffer].packageData[i]);
+		printf("%02X ", package->packageData[i]);
 	}
-	/*
-	for (uint8_t i = 0; i< this->packageReceiveBuffer[receiveBufferCounter].packageRecordPosition; i++)
+
+	printf("\r\n");
+	for (uint8_t i = 0; i< package->packageLength; i++)
 	{
-		printf("%02X ", packageReceiveBuffer[receiveBufferCounter].packageData[i]);
+		printf("%02X ", package->packageData[i + FRAME_PAYLOAD_STARTINDEX]);
 	}
-	*/
+
 
 	//this->receiveBufferOverflow = false;
 	//this->packageRecordPosition = 0;
 	//this->packageRecording = false;
 }
 
-/*
-void XBEE::unescapeAPIFrame(){
-
-	if (this->excapeNextChar){
-		if (receivedByte == 0x33){
-
-		}else if (receivedByte == ){
-		}else if (receivedByte == ){
-		}else if (receivedByte == ){
-		}else{
-			printf ("escape error");
-
-		}
-
-	}
-	if (receivedByte == 0x7D){
-			//this is an escape character, and simply means that the next byte is escaped.
-			this->escapeNextChar = true;
-		}else if{
-
-		}
-}
-*/
-/*
-bool XBEE::apiFrameIsValid(char* frame){
-	//copy to buffer
-
+bool XBEE::apiFrameIsValid(receivePackage* package){
+	//test checksum
+	//checksum + (last 8 bits of sum of payload bytes must be FF)
 	//checksum on unescaped frame.
-//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
-		//test checksum:
-		uint32_t sum = 0;
-		for(uint16_t i=0;i<this->packageLength;i++){
-			//sum += this->receiveBuffer[i+3];
-			sum = sum + this->receiveBuffer[i+3];
-			printf("checksum + %08x: %08X\r\n", this->receiveBuffer[i+3],sum);
-			//checksum + last 8 bits must be FF.
-		}
+	//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
+
+	printf("package length: %d", package->packageLength);
+	printf("first byte: %02xbla\r\n", package->packageData[0]);
+	uint32_t sum = 0;
+	for(uint16_t i=0;i<package->packageLength;i++){
+		sum = sum + package->packageData[i +FRAME_PAYLOAD_STARTINDEX ];
+		//checksum + last 8 bits must be FF.
+	}
+	sum = sum & 0x000000FF;
+
+	printf(" is checksumSent + sum =  %01x + %01x ==FF??\r\n", package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength],sum);
+	if (sum + package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength] & 0x000000FF == 0x000000FF){
+		printf("checksum correct\r\n");
+		return true;
+	}else{
+		printf("checksum not correct\r\n");
+		return false;
+	}
+
 }
-/**/
+
+
 /*
-
-void XBEE::unescapeAPIFrame(char* frame){
-
-}
-
 void XBEE::escapeAPIFrame(char* frame){
 
 }
@@ -184,29 +168,30 @@ void XBEE::sendLocalPackage(){
 */
 
 void XBEE::processReceivedPackage(){
-
+	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
 	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
-	//check if first element is a buffer number that needs to be processed.
 	if (this->packageReceiveBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
 		bufferToProcess = this->packageReceiveBuffersToBeProcessed[0];
-	}
-
-	if (bufferToProcess != NOTHING_TO_BE_PROCESSED){
-		readReceivedLocalPackage((uint8_t)bufferToProcess);
-
-
-		//move all elements one step to the front, make last slot empty.
-		for (uint8_t i=0; i< NUMBER_OF_RECEIVEBUFFERS-1; i++){
-			this->packageReceiveBuffersToBeProcessed[i] = this->packageReceiveBuffersToBeProcessed[i +1];
-		}
-		this->packageReceiveBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
-
-		this->packageReceiveBufferIsLocked[bufferToProcess] =false;
-		printf ("buffer processed and released: %d\r\n",bufferToProcess);
 	}else{
 		printf ("nothing to process... \r\n");
-
+		return;
 	}
+
+	//process package
+
+	readReceivedLocalPackage(&this->packageReceiveBuffer[bufferToProcess]);
+	apiFrameIsValid(&this->packageReceiveBuffer[bufferToProcess]);
+
+	//delete package
+	//move all elements one step to the front, make last slot empty.
+	for (uint8_t i=0; i< NUMBER_OF_RECEIVEBUFFERS-1; i++){
+		this->packageReceiveBuffersToBeProcessed[i] = this->packageReceiveBuffersToBeProcessed[i+1];
+	}
+	this->packageReceiveBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
+
+	this->packageReceiveBufferIsLocked[bufferToProcess] =false;
+	printf ("buffer processed and released: %d\r\n", bufferToProcess);
+
 
 }
 
@@ -239,7 +224,7 @@ void XBEE::stats(){
 
 void XBEE::receiveLocalPackage(char receivedByte){
 	//This is done during the interrupt. keep it short! avoid printf!!
-
+	//printf("+++ %02X ", receivedByte);
 	//shorthand for the correct buffer to store the received byte
 	receivePackage* buffer;
 	buffer = &this->packageReceiveBuffer[this->receiveBufferCounter];
@@ -252,23 +237,26 @@ void XBEE::receiveLocalPackage(char receivedByte){
 		buffer->packageRecording = false;
 		buffer->packageLength = 0;
 		buffer->packageData[0]='\0';
+		unescapeNextReceivedByte = false;
 	}
 
-	if (buffer->packageRecordPosition > buffer->packageLength + 5){
+	if (buffer->packageRecordPosition > buffer->packageLength + 4){
 		//package length information conflict with number of received bytes
 		printf("ASSERT error: error in communication, package is longer than indicated. Will reset buffer.\r\n");
 		buffer->packageRecordPosition = 0;
 		buffer->packageRecording = false;
 		buffer->packageLength = 0;
 		buffer->packageData[0]='\0';
+		unescapeNextReceivedByte = false;
 
-	}else if (receivedByte == 0x7E){
-		//packages are sent in API2 which means 0x7E is always start (
+	}else if (receivedByte == 0x7E && !unescapeNextReceivedByte){
+		//packages are sent in API2 mode which means 0x7E is always start (
 		//new package
 		buffer->packageLength = 0;
 		buffer->packageRecording = true;
 		buffer->packageRecordPosition = 0;
 		buffer->packageData[0]='\0';
+		unescapeNextReceivedByte = false;
 
 		buffer->packageData[buffer->packageRecordPosition] = receivedByte;
 		buffer->packageRecordPosition ++;
@@ -276,8 +264,27 @@ void XBEE::receiveLocalPackage(char receivedByte){
 
 		printf ("new package, store in buffer: %d\r\n", this->receiveBufferCounter);
 
+	}else if (receivedByte == 0x7D){
+		unescapeNextReceivedByte = true;
 
 	}else if (buffer->packageRecording ){
+
+		//API2 unescaping.
+		if (unescapeNextReceivedByte){
+			if (receivedByte == '\x31'){
+				receivedByte = '\x11';
+			}else if (receivedByte == '\x33'){
+				receivedByte = '\x13';
+			}else if (receivedByte == '\x5E'){
+				receivedByte = '\x7E';
+			}else if (receivedByte == '\x5D'){
+				receivedByte = '\x7D';
+			}else{
+				printf("ASSERT ERROR: bad escape! char to be unescaped: %02X",receivedByte);
+			}
+			unescapeNextReceivedByte = false;
+		}
+
 		//record byte
 		buffer->packageData[buffer->packageRecordPosition] = receivedByte;
 		buffer->packageRecordPosition ++;
@@ -289,7 +296,7 @@ void XBEE::receiveLocalPackage(char receivedByte){
 		}
 
 		//end of package
-		if (buffer->packageRecordPosition == buffer->packageLength + 5){
+		if (buffer->packageRecordPosition == buffer->packageLength + 4){
 			printf("full package received \r\n");
 			buffer->packageRecording = false;
 
