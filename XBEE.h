@@ -77,7 +77,8 @@ public:
 	void readReceivedFrame(frameReceive* package);
 	void receiveInterruptHandler(char c);
 	void processReceivedFrame();
-
+	void deleteTopFrameInReceivedFIFOBuffer();
+	int16_t getTopFrameInReceivedFifoBuffer();
 	
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);

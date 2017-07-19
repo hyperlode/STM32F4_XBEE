@@ -96,6 +96,10 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 
 
 
+// ------------------------------------------------------------
+//  XBEE administration
+// ------------------------------------------------------------
+
 void XBEE::refresh(){
 	//check if package received.
 
@@ -114,10 +118,6 @@ void XBEE::stats(){
 		printf("slot: %d, buffer:%d\r\n",i,this->receiveFrameBuffersToBeProcessed[i]);
 	}
 }
-
-
-
-
 
 bool XBEE::apiFrameIsValid(frameReceive* package){
 	//test checksum of received frame
@@ -261,18 +261,36 @@ void XBEE::sendByte(uint8_t byteToSend){
 
 void XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
-	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
-	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
-		bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
-	}else{
-		printf ("nothing to process... \r\n");
+	int16_t bufferToProcess = getTopFrameInReceivedFifoBuffer();
+	if (bufferToProcess == NOTHING_TO_BE_PROCESSED){
 		return;
 	}
-
 	//process package
 
 	readReceivedFrame(&this->receiveFrameBuffers[bufferToProcess]);
 	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
+
+	deleteTopFrameInReceivedFIFOBuffer();
+	printf ("buffer processed and released: %d\r\n", bufferToProcess);
+}
+
+
+int16_t XBEE::getTopFrameInReceivedFifoBuffer(){
+	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
+	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
+		bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
+		return bufferToProcess;
+	}else{
+		printf ("nothing to process... \r\n");
+		return NOTHING_TO_BE_PROCESSED;
+	}
+}
+
+void XBEE::deleteTopFrameInReceivedFIFOBuffer(){
+	int16_t bufferToProcess = getTopFrameInReceivedFifoBuffer();
+	if (bufferToProcess == NOTHING_TO_BE_PROCESSED){
+			return;
+		}
 
 	//delete package
 	//move all elements one step to the front, make last slot empty.
@@ -280,9 +298,7 @@ void XBEE::processReceivedFrame(){
 		this->receiveFrameBuffersToBeProcessed[i] = this->receiveFrameBuffersToBeProcessed[i+1];
 	}
 	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
-
 	this->receiveFrameBuffersIsLocked[bufferToProcess] =false;
-	printf ("buffer processed and released: %d\r\n", bufferToProcess);
 }
 
 void XBEE::readReceivedFrame(frameReceive* frame){
