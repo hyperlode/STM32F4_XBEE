@@ -162,6 +162,11 @@ int main(void)
 							tmp.data[i] = testData[i];
 						}
 						radio.buildFrame(&tmp);
+						radio.sendSendBuffer();
+					}else if (stringsAreEqual(serialBuffer, "attest")){
+
+						radio.sendLocalATCommand();
+
 
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();
@@ -173,6 +178,7 @@ int main(void)
 								"available commands:\r\n"
 								"\txbee: Shows xbee receive statistics\r\n"
 								"\ttxtest: send data to xbee test\r\n"
+								"\tattest: send at data to xbee test\r\n"
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");
 					}

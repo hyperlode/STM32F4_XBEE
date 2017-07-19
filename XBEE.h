@@ -32,6 +32,14 @@ struct message{
 };
 */
 
+
+struct xbeeDevice{
+	uint8_t address [8]; //64 bit
+
+
+};
+
+
 //http://docs.digi.com/display/RFKitsCommon/Frame+structure
 struct frameData{
 	uint16_t length = 0;
@@ -60,7 +68,7 @@ struct frame{
 
 
 
-
+extern const uint8_t atTest[];
 
 
 class XBEE{
@@ -70,20 +78,23 @@ public:
 	void init(uint8_t UART_Number, uint32_t baud);
 	void refresh();
 	void stats();
+	void displayFrame(frame* frame);
 
+	void sendLocalATCommand();
 
 	
 	void receiveFrame(char receivedByte);
 	void readReceivedFrame(frameReceive* package);
 	void receiveInterruptHandler(char c);
 	void processReceivedFrame();
-	void deleteTopFrameInReceivedFIFOBuffer();
+	void deleteTopFrameInReceivedFifoBuffer();
 	int16_t getTopFrameInReceivedFifoBuffer();
 	
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);
 
 	void sendPackage(char charToSend);
+	void sendSendBuffer();
 	void sendTest();
 	void sendFrame(frame* frame);
 	void sendByte(uint8_t byteToSend);
@@ -109,6 +120,7 @@ private:
 	
 	bool sendingFrameIsBusy = false;
 	frame frameToSend;
+
 
 
 };

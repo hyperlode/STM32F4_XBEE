@@ -1,6 +1,9 @@
 
 #include "XBEE.h"
 
+
+const uint8_t atTest[] = {0x08, 0x01, 0x53, 0x48};
+
 XBEE::XBEE(){
 	receiveBufferCounter = 0;
 	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
@@ -94,6 +97,25 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 	}
 }
 
+//AT Commands
+//void XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* payload ){
+void XBEE::sendLocalATCommand(){
+	//test://get address.
+	frameData tmp;
+	tmp.length = 4;
+	for (uint8_t i = 0; i< tmp.length; i++){
+		tmp.data[i] = atTest[i];
+	}
+	buildFrame(&tmp);
+
+
+	displayFrame(&frameToSend);
+	sendSendBuffer();
+	printf("AT command sent.");
+}
+
+
+
 
 
 // ------------------------------------------------------------
@@ -148,6 +170,13 @@ uint8_t XBEE::calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t len
 	return 0xFF - sum; //
 }
 
+void XBEE::displayFrame(frame* frame){
+	printf("display frame: ");
+	for (uint8_t i = 0; i< frame->length;i++){
+		printf("%02x ",frame->frame[i]);
+	}
+
+}
 
 // ------------------------------------------------------------
 //  XBEE send
@@ -225,7 +254,14 @@ void XBEE::buildFrame(frameData* frameData){
 			printf("%02x ", frameToSend.frameEscaped[i]);
 		}
 */
+
+}
+
+
+
+void XBEE::sendSendBuffer(){
 	sendFrame(&frameToSend);
+	sendingFrameIsBusy = false;
 }
 
 void XBEE::sendFrame(frame* frame){
@@ -270,7 +306,7 @@ void XBEE::processReceivedFrame(){
 	readReceivedFrame(&this->receiveFrameBuffers[bufferToProcess]);
 	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
 
-	deleteTopFrameInReceivedFIFOBuffer();
+	deleteTopFrameInReceivedFifoBuffer();
 	printf ("buffer processed and released: %d\r\n", bufferToProcess);
 }
 
@@ -286,7 +322,7 @@ int16_t XBEE::getTopFrameInReceivedFifoBuffer(){
 	}
 }
 
-void XBEE::deleteTopFrameInReceivedFIFOBuffer(){
+void XBEE::deleteTopFrameInReceivedFifoBuffer(){
 	int16_t bufferToProcess = getTopFrameInReceivedFifoBuffer();
 	if (bufferToProcess == NOTHING_TO_BE_PROCESSED){
 			return;
