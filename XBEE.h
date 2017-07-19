@@ -11,11 +11,17 @@
 #define NUMBER_OF_SENDBUFFERS 3
 #define SEND_BUFFER_SIZE RECEIVE_BUFFER_SIZE
 #define NUMBER_OF_RECEIVEBUFFERS 3
-#define FRAME_PAYLOAD_STARTINDEX 3
+#define FRAME_FRAMEDATA_STARTINDEX 3
+#define AT_DATA_SIZE 100
+#define AT_FRAME_DATA_STARTINDEX 5
+
+#define AT_MAC_HEIGH_SH 0x5348
+#define AT_MAC_LOW_SL 0x534C
 
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
 #define API_MODE 2 //ASSUME API2 is used (escape functionality built in). No other mode available.
 #define NOTHING_TO_BE_PROCESSED -1
+#define INVALID_AT_COMMAND 0x02
 
 
 //xbee frame types
@@ -45,7 +51,17 @@ struct frameData{
 	uint16_t length = 0;
 	uint8_t frameType;
 	uint8_t data [RECEIVE_BUFFER_SIZE+1];
-	uint8_t destinationAddress [8];
+	//uint8_t destinationAddress [8];
+
+};
+
+struct atFrameData{
+	bool isResponse;
+	uint16_t atCommand = INVALID_AT_COMMAND;
+	uint8_t data [AT_DATA_SIZE];
+	uint16_t dataLength = 0;
+	uint8_t id = 0;
+	uint8_t status = 0;
 
 };
 
@@ -75,24 +91,34 @@ class XBEE{
 
 public:
 	XBEE();
+
+	//administration
 	void init(uint8_t UART_Number, uint32_t baud);
 	void refresh();
 	void stats();
 	void displayFrame(frame* frame);
+	void displayAtFrameData(atFrameData* atFrame);
+	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
+	bool apiFrameIsValid(frameReceive* package);
 
-	void sendLocalATCommand();
+
+	//AT
+	void sendLocalATCommand(uint16_t atCommand);
+	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
 
 	
+	//receive frame
 	void receiveFrame(char receivedByte);
-	void readReceivedFrame(frameReceive* package);
+	void displayTopFrameInReceivedFifoBuffer(frameReceive* package);
+	void parseTopFrameInReceivedFifoBuffer(frameReceive* package);
+
 	void receiveInterruptHandler(char c);
 	void processReceivedFrame();
 	void deleteTopFrameInReceivedFifoBuffer();
 	int16_t getTopFrameInReceivedFifoBuffer();
 	
-	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
-	bool apiFrameIsValid(frameReceive* package);
 
+	//send frame
 	void sendPackage(char charToSend);
 	void sendSendBuffer();
 	void sendTest();
@@ -121,7 +147,7 @@ private:
 	bool sendingFrameIsBusy = false;
 	frame frameToSend;
 
-
+	atFrameData	atResponse;
 
 };
 

@@ -165,8 +165,9 @@ int main(void)
 						radio.sendSendBuffer();
 					}else if (stringsAreEqual(serialBuffer, "attest")){
 
-						radio.sendLocalATCommand();
-
+						//radio.sendLocalATCommand(0x5348);
+						radio.sendLocalATCommand(AT_MAC_HEIGH_SH);
+						radio.sendLocalATCommand(AT_MAC_LOW_SL);
 
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();

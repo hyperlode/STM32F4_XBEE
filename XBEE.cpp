@@ -97,22 +97,51 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 	}
 }
 
+void XBEE::atFrameDataToFrameData(atFrameData* atData, frameData* frameData){
+
+	if (atData->isResponse){
+		printf("ASSERT ERROR: Not available , responses are typically sent from the XBEE. Why would you like to parse this at response to framedata (are you sure?)? \r\n");
+
+	}else{
+		frameData->length = 4;
+		frameData->data[0] = 0x08; //frame type = AT Command
+		frameData->data[1] = 0x01; //frame ID-------------------> TODO
+		frameData->data[2] = atData->atCommand>>8;
+		frameData->data[3] = atData->atCommand & 0x00FF;
+	}
+	/*
+
+*/
+
+}
+
 //AT Commands
 //void XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* payload ){
-void XBEE::sendLocalATCommand(){
+void XBEE::sendLocalATCommand(uint16_t atCommand){
 	//test://get address.
-	frameData tmp;
-	tmp.length = 4;
-	for (uint8_t i = 0; i< tmp.length; i++){
-		tmp.data[i] = atTest[i];
-	}
-	buildFrame(&tmp);
+	printf("---will send AT command---\r\n");
+	frameData frameData;
+
+	atFrameData atData;
+	atData.isResponse = false;;
+	atData.atCommand = atCommand;
+	//atData.data [AT_DATA_SIZE];
+	atData.dataLength = 0;
+	atData.id = 0x01; //never set to zero
+	//atData.status;
 
 
-	displayFrame(&frameToSend);
+	displayAtFrameData(&atData	);
+
+	atFrameDataToFrameData(&atData,&frameData);
+
+	buildFrame(&frameData	);
+
+	//displayFrame(&frameToSend);
 	sendSendBuffer();
-	printf("AT command sent.");
+	printf("---AT command sent---\r\n");
 }
+
 
 
 
@@ -149,7 +178,7 @@ bool XBEE::apiFrameIsValid(frameReceive* package){
 
 	//printf("package length: %d", package->lengthFrameData);
 	//printf("first byte: %02xbla\r\n", package->frame[0]);
-	if ( calculateCheckSum((uint8_t*)package->frame, FRAME_PAYLOAD_STARTINDEX, package->lengthFrameData) == package->frame[FRAME_PAYLOAD_STARTINDEX+ package->lengthFrameData]){
+	if ( calculateCheckSum((uint8_t*)package->frame, FRAME_FRAMEDATA_STARTINDEX, package->lengthFrameData) == package->frame[FRAME_FRAMEDATA_STARTINDEX+ package->lengthFrameData]){
 		//printf("RECEIVE Info: Checksum correct\r\n");
 		return true;
 	}else{
@@ -175,8 +204,30 @@ void XBEE::displayFrame(frame* frame){
 	for (uint8_t i = 0; i< frame->length;i++){
 		printf("%02x ",frame->frame[i]);
 	}
+	printf("\r\n");
+}
+
+void XBEE::displayAtFrameData(atFrameData* atFrame){
+	printf("display at frame: \r\n");
+	if (atFrame->isResponse){
+		printf("type: AT command response\r\n");
+		printf("id: %d\r\n",atFrame->id);
+		printf("command: %c%c\r\n", atFrame->atCommand>>8, atFrame->atCommand& 0x00FF );
+		printf("status: %d\r\n",atFrame->status);
+		printf("data: ");
+		for (uint8_t i = 0; i< atFrame->dataLength;i++){
+			printf("%02x ",atFrame->data[i]);
+		}
+		printf("\r\n");
+
+	}else{
+		printf("type: AT command\r\n");
+		printf("id: %d\r\n",atFrame->id);
+		printf("command: %c%c\r\n", atFrame->atCommand>>8, atFrame->atCommand& 0x00FF );
+	}
 
 }
+
 
 // ------------------------------------------------------------
 //  XBEE send
@@ -299,15 +350,21 @@ void XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
 	int16_t bufferToProcess = getTopFrameInReceivedFifoBuffer();
 	if (bufferToProcess == NOTHING_TO_BE_PROCESSED){
+		//nothing to process.
 		return;
 	}
-	//process package
 
-	readReceivedFrame(&this->receiveFrameBuffers[bufferToProcess]);
+	//process package
+	displayTopFrameInReceivedFifoBuffer(&this->receiveFrameBuffers[bufferToProcess]);
+	parseTopFrameInReceivedFifoBuffer(&this->receiveFrameBuffers[bufferToProcess]);
+
 	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
 
 	deleteTopFrameInReceivedFifoBuffer();
 	printf ("buffer processed and released: %d\r\n", bufferToProcess);
+
+
+
 }
 
 
@@ -336,8 +393,30 @@ void XBEE::deleteTopFrameInReceivedFifoBuffer(){
 	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
 	this->receiveFrameBuffersIsLocked[bufferToProcess] =false;
 }
+void XBEE::parseTopFrameInReceivedFifoBuffer (frameReceive* frame){
+	//AT response parsing
+	if (frame->frame[FRAME_FRAMEDATA_STARTINDEX] == 0x88){
+		printf("AT response frame.\r\n");
+		atResponse.id = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
+		atResponse.atCommand = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 2] <<8 | frame->frame[FRAME_FRAMEDATA_STARTINDEX + 3];
+		atResponse.status = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 4];
+		atResponse.dataLength = frame->lengthFrameData - AT_FRAME_DATA_STARTINDEX;
+		for (uint16_t i = 0; i< atResponse.dataLength; i++){
+			atResponse.data[i] = frame->frame[FRAME_FRAMEDATA_STARTINDEX + AT_FRAME_DATA_STARTINDEX + i];
+		}
+		displayAtFrameData(&atResponse);
+	}
+}
 
-void XBEE::readReceivedFrame(frameReceive* frame){
+void XBEE::displayTopFrameInReceivedFifoBuffer(frameReceive* frame){
+	//checksum
+	if (apiFrameIsValid(frame)){
+		//printf("RECEIVE Info: Checksum correct\r\n");
+
+	}else{
+		printf("RECEIVE ERROR: Checksum not correct\r\n");
+	}
+
 	//receiveFrameBuffers
 	printf("raw frame (unescaped):\r\n");
 	for (uint8_t i = 0; i< frame->frameRecordIndex; i++)
@@ -348,14 +427,14 @@ void XBEE::readReceivedFrame(frameReceive* frame){
 	printf("\r\n frameData:\r\n");
 	for (uint8_t i = 0; i< frame->lengthFrameData; i++)
 	{
-		printf("%02X ", frame->frame[i + FRAME_PAYLOAD_STARTINDEX]);
+		printf("%02X ", frame->frame[i + FRAME_FRAMEDATA_STARTINDEX]);
 	}
-	if (apiFrameIsValid(frame)){
-		printf("RECEIVE Info: Checksum correct\r\n");
+	printf("\r\n");
 
-	}else{
-		printf("RECEIVE ERROR: Checksum not correct\r\n");
-	}
+
+
+
+
 }
 
 void XBEE::receiveFrame(char receivedByte){
