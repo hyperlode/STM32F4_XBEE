@@ -95,100 +95,6 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud){
 }
 
 
-void XBEE::readReceivedFrame(frameReceive* package){
-	//receiveFrameBuffers
-
-	for (uint8_t i = 0; i< package->packageRecordPosition; i++)
-	{
-		printf("%02X ", package->packageData[i]);
-	}
-
-	printf("\r\n");
-	for (uint8_t i = 0; i< package->packageLength; i++)
-	{
-		printf("%02X ", package->packageData[i + FRAME_PAYLOAD_STARTINDEX]);
-	}
-
-
-	//this->receiveBufferOverflow = false;
-	//this->packageRecordPosition = 0;
-	//this->packageRecording = false;
-}
-
-bool XBEE::apiFrameIsValid(frameReceive* package){
-	//test checksum
-	//sum of payload + (last 8 bits of sum of frame bytes must be FF)
-	//checksum on unescaped frame.
-	//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
-
-	printf("package length: %d", package->packageLength);
-	printf("first byte: %02xbla\r\n", package->packageData[0]);
-	if ( calculateCheckSum((uint8_t*)package->packageData, FRAME_PAYLOAD_STARTINDEX, package->packageLength) == package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength]){
-		printf("RECEIVE ERROR: Checksum correct\r\n");
-		return true;
-	}else{
-		printf("RECEIVE ERROR: Checksum not correct\r\n");
-				return false;
-	}
-/*
-	//printf(" is checksumSent + sum =  %01x + %01x ==FF??\r\n", package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength],sum);
-	if (sum + package->packageData[FRAME_PAYLOAD_STARTINDEX+ package->packageLength] & 0x000000FF == 0x000000FF){
-		//printf("checksum correct\r\n");
-		return true;
-	}else{
-		printf("RECEIVE ERROR: Checksum not correct\r\n");
-		return false;
-	}
-*/
-}
-
-uint8_t XBEE::calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length){
-	//
-	uint32_t sum = 0;
-	for(uint16_t i=0;i<length;i++){
-		sum = sum + bytes[i + startIndex];
-		//checksum + last 8 bits must be FF.
-	}
-
-	sum = sum & 0x000000FF; //only last byte is considered.
-	return 0xFF - sum;
-}
-
-/*
-
-
-void XBEE::sendLocalPackage(){
-}
-*/
-
-void XBEE::processReceivedFrame(){
-	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
-	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
-	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
-		bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
-	}else{
-		printf ("nothing to process... \r\n");
-		return;
-	}
-
-	//process package
-
-	readReceivedFrame(&this->receiveFrameBuffers[bufferToProcess]);
-	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
-
-	//delete package
-	//move all elements one step to the front, make last slot empty.
-	for (uint8_t i=0; i< NUMBER_OF_RECEIVEBUFFERS-1; i++){
-		this->receiveFrameBuffersToBeProcessed[i] = this->receiveFrameBuffersToBeProcessed[i+1];
-	}
-	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
-
-	this->receiveFrameBuffersIsLocked[bufferToProcess] =false;
-	printf ("buffer processed and released: %d\r\n", bufferToProcess);
-
-
-}
-
 
 void XBEE::refresh(){
 	//check if package received.
@@ -208,6 +114,40 @@ void XBEE::stats(){
 		printf("slot: %d, buffer:%d\r\n",i,this->receiveFrameBuffersToBeProcessed[i]);
 	}
 }
+
+
+
+
+
+bool XBEE::apiFrameIsValid(frameReceive* package){
+	//test checksum of received frame
+	//sum of payload + (last 8 bits of sum of frame bytes must be FF)
+	//checksum on unescaped frame.
+	//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
+
+	//printf("package length: %d", package->lengthFrameData);
+	//printf("first byte: %02xbla\r\n", package->frame[0]);
+	if ( calculateCheckSum((uint8_t*)package->frame, FRAME_PAYLOAD_STARTINDEX, package->lengthFrameData) == package->frame[FRAME_PAYLOAD_STARTINDEX+ package->lengthFrameData]){
+		//printf("RECEIVE Info: Checksum correct\r\n");
+		return true;
+	}else{
+		printf("RECEIVE ERROR: Checksum not correct\r\n");
+		return false;
+	}
+}
+
+uint8_t XBEE::calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length){
+	//http://knowledge.digi.com/articles/Knowledge_Base_Article/Calculating-the-Checksum-of-an-API-Packet
+	uint32_t sum = 0;
+	for(uint16_t i=0;i<length;i++){
+		sum = sum + bytes[i + startIndex];
+		//checksum + last 8 bits must be FF.
+	}
+
+	sum = sum & 0x000000FF; //only last byte is considered.
+	return 0xFF - sum; //
+}
+
 
 // ------------------------------------------------------------
 //  XBEE send
@@ -247,7 +187,7 @@ void XBEE::buildFrame(frameData* frameData){
 	for (uint8_t i=1; i<frameToSend.length; i++){
 
 		uint8_t byteToSend = frameToSend.frame[i];
-		printf("byte: %02x \r\n",byteToSend);
+		//printf("byte: %02x \r\n",byteToSend);
 
 		if (byteToSend == 0x11|| byteToSend == 0x13 || byteToSend == 0x7E || byteToSend == 0x7D){
 			frameToSend.lengthEscaped++;
@@ -318,52 +258,106 @@ void XBEE::sendByte(uint8_t byteToSend){
 // ------------------------------------------------------------
 //  XBEE receive
 // ------------------------------------------------------------
+
+void XBEE::processReceivedFrame(){
+	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
+	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
+	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
+		bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
+	}else{
+		printf ("nothing to process... \r\n");
+		return;
+	}
+
+	//process package
+
+	readReceivedFrame(&this->receiveFrameBuffers[bufferToProcess]);
+	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
+
+	//delete package
+	//move all elements one step to the front, make last slot empty.
+	for (uint8_t i=0; i< NUMBER_OF_RECEIVEBUFFERS-1; i++){
+		this->receiveFrameBuffersToBeProcessed[i] = this->receiveFrameBuffersToBeProcessed[i+1];
+	}
+	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
+
+	this->receiveFrameBuffersIsLocked[bufferToProcess] =false;
+	printf ("buffer processed and released: %d\r\n", bufferToProcess);
+}
+
+void XBEE::readReceivedFrame(frameReceive* frame){
+	//receiveFrameBuffers
+	printf("raw frame (unescaped):\r\n");
+	for (uint8_t i = 0; i< frame->frameRecordIndex; i++)
+	{
+		printf("%02X ", frame->frame[i]);
+	}
+
+	printf("\r\n frameData:\r\n");
+	for (uint8_t i = 0; i< frame->lengthFrameData; i++)
+	{
+		printf("%02X ", frame->frame[i + FRAME_PAYLOAD_STARTINDEX]);
+	}
+	if (apiFrameIsValid(frame)){
+		printf("RECEIVE Info: Checksum correct\r\n");
+
+	}else{
+		printf("RECEIVE ERROR: Checksum not correct\r\n");
+	}
+}
+
 void XBEE::receiveFrame(char receivedByte){
 	//This is done during the interrupt. keep it short! avoid printf!!
+
 	//printf("+++ %02X ", receivedByte);
 	//shorthand for the correct buffer to store the received byte
+
+
 	frameReceive* buffer;
 	buffer = &this->receiveFrameBuffers[this->receiveBufferCounter];
-	//the shorthand: buffer->packageLength   is equal to (*buffer).packageLength; //https://stackoverflow.com/questions/22921998/error-request-for-member-size-in-a-which-is-of-pointer-type-but-i-didnt
+	//the shorthand: buffer->lengthFrameData   is equal to (*buffer).lengthFrameData; //https://stackoverflow.com/questions/22921998/error-request-for-member-size-in-a-which-is-of-pointer-type-but-i-didnt
 
-	if( buffer->packageRecordPosition  >= RECEIVE_BUFFER_SIZE ){
+	if( buffer->frameRecordIndex  >= RECEIVE_BUFFER_SIZE ){
 		//buffer overflow
 		printf("buffer overflowprogram buffer is %d, XBEE package length is up to 65535 + 3 bytes. --> Overflow, will reset buffer.", RECEIVE_BUFFER_SIZE);
-		buffer->packageRecordPosition = 0;
-		buffer->packageRecording = false;
-		buffer->packageLength = 0;
-		buffer->packageData[0]='\0';
+		buffer->frameRecordIndex = 0;
+		buffer->frameBusyReceiving = false;
+		buffer->lengthFrameData = 0;
+		buffer->length = 4;
+		buffer->frame[0]='\0';
 		unescapeNextReceivedByte = false;
 	}
 
-	if (buffer->packageRecordPosition > buffer->packageLength + 4){
+	if (buffer->frameRecordIndex > buffer->lengthFrameData + 4){
 		//package length information conflict with number of received bytes
 		printf("ASSERT error: error in communication, package is longer than indicated. Will reset buffer.\r\n");
-		buffer->packageRecordPosition = 0;
-		buffer->packageRecording = false;
-		buffer->packageLength = 0;
-		buffer->packageData[0]='\0';
+		buffer->frameRecordIndex = 0;
+		buffer->frameBusyReceiving = false;
+		buffer->lengthFrameData = 0;
+		buffer->length = 4;
+		buffer->frame[0]='\0';
 		unescapeNextReceivedByte = false;
 
 	}else if (receivedByte == 0x7E && !unescapeNextReceivedByte){
 		//packages are sent in API2 mode which means 0x7E is always start (
 		//new package
-		buffer->packageLength = 0;
-		buffer->packageRecording = true;
-		buffer->packageRecordPosition = 0;
-		buffer->packageData[0]='\0';
+		buffer->lengthFrameData = 0;
+		buffer->length = 4;
+		buffer->frameBusyReceiving = true;
+		buffer->frameRecordIndex = 0;
+		buffer->frame[0]='\0';
 		unescapeNextReceivedByte = false;
 
-		buffer->packageData[buffer->packageRecordPosition] = receivedByte;
-		buffer->packageRecordPosition ++;
-		buffer->packageData[buffer->packageRecordPosition]='\0';
+		buffer->frame[buffer->frameRecordIndex] = receivedByte;
+		buffer->frameRecordIndex ++;
+		buffer->frame[buffer->frameRecordIndex]='\0';
 
 		printf ("new package, store in buffer: %d\r\n", this->receiveBufferCounter);
 
 	}else if (receivedByte == 0x7D){
 		unescapeNextReceivedByte = true;
 
-	}else if (buffer->packageRecording ){
+	}else if (buffer->frameBusyReceiving ){
 
 		//API2 unescaping.
 		if (unescapeNextReceivedByte){
@@ -382,19 +376,20 @@ void XBEE::receiveFrame(char receivedByte){
 		}
 
 		//record byte
-		buffer->packageData[buffer->packageRecordPosition] = receivedByte;
-		buffer->packageRecordPosition ++;
-		buffer->packageData[buffer->packageRecordPosition]='\0';
+		buffer->frame[buffer->frameRecordIndex] = receivedByte;
+		buffer->frameRecordIndex ++;
+		buffer->frame[buffer->frameRecordIndex]='\0';
 
 		//when length information bytes are received, they are used to check when the package is received completely.
-		if (buffer->packageRecordPosition == 3){
-			buffer->packageLength = buffer->packageData[1]<<8 | buffer->packageData[2]; //this->packageLength = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
+		if (buffer->frameRecordIndex == 3){
+			buffer->lengthFrameData = buffer->frame[1]<<8 | buffer->frame[2]; //this->lengthFrameData = this->receiveBuffer[1]*256 + this->receiveBuffer[2]; //
+			buffer->length = buffer->lengthFrameData + 4;
 		}
 
 		//end of package
-		if (buffer->packageRecordPosition == buffer->packageLength + 4){
+		if (buffer->frameRecordIndex == buffer->length){
 			printf("full package received \r\n");
-			buffer->packageRecording = false;
+			buffer->frameBusyReceiving = false;
 
 			//add finished package to list of packages to be processed
 			uint8_t i =0;
@@ -414,10 +409,10 @@ void XBEE::receiveFrame(char receivedByte){
 
 				if (this->receiveBufferCounter >= NUMBER_OF_RECEIVEBUFFERS){
 					this->receiveBufferCounter = 0;
-					printf("%d\r\n" ,this->receiveBufferCounter );
+					//printf("%d\r\n" ,this->receiveBufferCounter );
 				}
 
-				printf("%d\r\n" ,this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] );
+				//printf("%d\r\n" ,this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] );
 				//check if next buffer is free
 				if (this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] ){
 					printf("unprocessed overflow WARNING: all package buffers full, wait with sending... \r\n "); //todo
@@ -429,11 +424,7 @@ void XBEE::receiveFrame(char receivedByte){
 	}
 }
 
-
-
-
 void XBEE::receiveInterruptHandler(char c){
 	this->receiveFrame(c);
-
 }
 

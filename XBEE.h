@@ -23,31 +23,14 @@
 
 
 
-
+/*
 struct message{
 	uint32_t address;
 	uint16_t command;
 	uint32_t id;
 	uint8_t  arguments [64]; //64bytes payload
 };
-
-struct frameReceive{
-	uint32_t packageRecordPosition = 0;
-	bool packageRecording = false;
-	char packageData[RECEIVE_BUFFER_SIZE+1];
-	char payload[RECEIVE_BUFFER_SIZE+1];
-
-	uint32_t packageLength = 0;
-};
-
-struct frame{
-	char payload[SEND_BUFFER_SIZE+1];
-	uint8_t frame[SEND_BUFFER_SIZE+1]; //packageData
-	uint8_t frameEscaped[SEND_BUFFER_SIZE+1];
-	uint16_t length = 0;
-	uint16_t lengthEscaped = 0;
-};
-
+*/
 
 //http://docs.digi.com/display/RFKitsCommon/Frame+structure
 struct frameData{
@@ -57,6 +40,26 @@ struct frameData{
 	uint8_t destinationAddress [8];
 
 };
+
+struct frameReceive{
+	//frameData data;
+	uint32_t frameRecordIndex = 0;
+	bool frameBusyReceiving = false;
+	char frame[RECEIVE_BUFFER_SIZE+1];
+	uint16_t lengthFrameData = 0; //
+	uint16_t length = 4; //minumum four chars long.
+};
+
+struct frame{
+	//frameData data;
+	uint8_t frame[SEND_BUFFER_SIZE+1]; //packageData
+	uint8_t frameEscaped[SEND_BUFFER_SIZE+1];
+	uint16_t length = 0;
+	uint16_t lengthEscaped = 0;
+};
+
+
+
 
 
 
