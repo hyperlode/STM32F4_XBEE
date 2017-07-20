@@ -157,28 +157,17 @@ int main(void)
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
 					}else if (stringsAreEqual(serialBuffer, "txtest")){
-/*
-
-						frameData tmp;
-						tmp.length = 20;
-						for (uint8_t i = 0;i< tmp.length;i++){
-							tmp.data[i] = testData[i];
-						}
-						radio.buildAndSendFrame(&tmp);
-*/
 						radio.sendMessageToDestination(destinationAddress, 8, true);
-					}else if (stringsAreEqual(serialBuffer, "yee")){
-						radio.sendMessageToDestination(destinationAddress, 8, false);
+
+					}else if (stringsAreEqual(serialBuffer, "xblocadd")){
+						radio.setLocalXbeeAddress();
+						//radio.sendMessageToDestination(destinationAddress, 8, false);
+
 					}else if (stringsAreEqual(serialBuffer, "xbeeND")){
 						radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
+
 					}else if (stringsAreEqual(serialBuffer, "attest")){
 
-						//radio.sendLocalATCommand(0x5348);
-						//radio.sendLocalATCommand(AT_MAC_HEIGH_SH);
-						//radio.sendLocalATCommand(AT_MAC_LOW_SL);
-						//radio.sendLocalATCommand(AT_AVAILABLE_FREQUENCIES_AF);
-						//radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH);
-						//radio.sendLocalATCommand(AT_MAC_DESTINATION_LOW_DL);
 
 						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND);
 						radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH, true);
@@ -195,7 +184,7 @@ int main(void)
 								"available commands:\r\n"
 								"\txbee: Shows xbee receive statistics\r\n"
 								"\ttxtest: send data to xbee test\r\n"
-								"\tyee: send data to xbee test\r\n"
+								"\txblocadd: get the local address from the xbee and set it in the program \r\n"
 								"\txbeeND: list up all active remote xbees\r\n"
 								"\tattest: send at data to xbee test\r\n"
 								"\tlode: Displays nonsense...\r\n"

@@ -21,6 +21,7 @@
 #define AT_MAC_DESTINATION_HIGH_DH 0x4448
 #define AT_MAC_DESTINATION_LOW_DL 0x444C
 
+
 #define AT_DISCOVER_NODES_ND 0x4E44    //searches nodes in the entire network. great for discovering radios //https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_nd.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____3
 #define AT_FIND_NEIGHBOURS_FN 0x464E    //same like ND but only one hop away! https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_fn.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____4
 
@@ -33,9 +34,13 @@
 
 
 //xbee frame types
-#define XBEE_FRAME_TYPE_RECEIVE_PACKET 'x\90'
+#define XBEE_FRAME_TYPE_RECEIVE_PACKET 0x90
 
+#define XBEE_FRAME_TYPE_AT_COMMAND 0x08
+#define XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE 0x88
+#define XBEE_FRAME_TYPE_TRANSMIT_REQUEST 0x10
 
+#define XBEE_FRAME_TYPE_TRANSMIT_STATUS 0x8B
 
 /*
 struct message{
@@ -46,13 +51,11 @@ struct message{
 };
 */
 
-
 struct xbeeRadio{
 	uint8_t address [8]; //64 bit
 	bool isAddressSet = false;
 
 };
-
 
 //http://docs.digi.com/display/RFKitsCommon/Frame+structure
 struct frameData{
@@ -62,7 +65,6 @@ struct frameData{
 	//uint8_t destinationAddress [8];
 
 };
-
 
 struct transmitStatusFrame{
 	uint8_t id = 0;
@@ -116,6 +118,9 @@ class XBEE{
 public:
 	XBEE();
 
+
+	bool setLocalXbeeAddress();
+
 	//administration
 	void init(uint8_t UART_Number, uint32_t baud);
 	void refresh();
@@ -135,7 +140,7 @@ public:
 	void sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse);
 
 	//AT
-	void sendLocalATCommand(uint16_t atCommand, bool awaitResponse);
+	bool sendLocalATCommand(uint16_t atCommand, bool awaitResponse);
 	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
 	void processAtResponse();
 	void displayAtCommandResponseFrameData(atCommandResponseFrameData* atFrame);
@@ -163,7 +168,7 @@ public:
 
 	void releaseSendLock();
 	bool buildAndSendFrame(frameData* frameData);
-
+	bool sendingIsLocked();
 
 
 	xbeeRadio destinationXbee;

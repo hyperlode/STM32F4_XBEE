@@ -10,8 +10,6 @@ XBEE::XBEE(){
 		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
 		this->receiveFrameBuffersIsLocked[i] = false;
 	}
-
-
 }
 
 void XBEE::init(uint8_t UART_Number, uint32_t baud){
@@ -111,22 +109,39 @@ void XBEE::sendAtCommandAndLockXbeeUntilResponse(uint16_t atCommand){
 
 
 
-void XBEE::processTransmitStatus(){
 
 
-	if (transmitResponse.status == 0x00){
-		printf("transmit success (id:%d)\r\n",transmitResponse.id);
-	}else{
-		printf("transmit status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
+//--------------------------------------------------
+
+bool XBEE::setLocalXbeeAddress(){
+	//set time out time
+
+	//get msb bytes.
+	if (!sendLocalATCommand( AT_MAC_HEIGH_SH , true)){
+		return false;
 	}
 
+	//get low byte --> send at command.
+	while (sendingIsLocked()){
+		refresh();
+		//wait
+	}
 
-	releaseSendLock();
-}
+	if (!sendLocalATCommand( AT_MAC_LOW_SL , true)){
+		return false;
+	}
 
-void XBEE::releaseSendLock(){
-	senderXbeeLockedWaitingForResponse = false;
-	idOfFrameWaitingForResponse = 0;
+	while (sendingIsLocked()){
+		refresh();
+		//wait
+	}
+
+	printf("local xbee address set: ");
+	for (uint8_t i=0 ; i<8 ; i++){
+		printf ("%02x ", senderXbee.address[i]);
+	}
+	printf("\r\n");
+	return true;
 }
 
 void XBEE::setDestinationAddress(){
@@ -138,7 +153,8 @@ void XBEE::setDestinationAddress(){
 
 //------------------
 
-//send transmit request
+//send data to destination xbee
+
 void XBEE::sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse){
 	//frame type: 0X10 transmit request
 	frameData frameData;
@@ -164,10 +180,20 @@ void XBEE::sendMessageToDestination(uint8_t* message, uint16_t messageLength, bo
 	buildAndSendFrame(&frameData);
 }
 
+void XBEE::processTransmitStatus(){
+	if (transmitResponse.status == 0x00){
+		printf("transmit success (id:%d)\r\n",transmitResponse.id);
+	}else{
+		printf("transmit status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
+	}
+	releaseSendLock();
+
+}
+
 //---------------
 //AT Command mode
 //void XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* payload ){
-void XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
+bool XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 	// frame type: 0x08 AT Command
 	//test://get address.
 	printf("---sending AT command (please wait)---\r\n");
@@ -184,17 +210,18 @@ void XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 
 	atFrameDataToFrameData(&atData,&frameData);
 
-	buildAndSendFrame(&frameData);
+	bool success = buildAndSendFrame(&frameData);
 
 	//displayFrame(&frameToSend);
 	printf("---AT command sent---\r\n");
+	return success;
 }
 
 void XBEE::atFrameDataToFrameData(atFrameData* atData, frameData* frameData){
 	//translate atFrame to framedata of an API package.
 
 	frameData->length = 4;
-	frameData->data[0] = 0x08; //frame type = AT Command
+	frameData->data[0] = XBEE_FRAME_TYPE_AT_COMMAND; //frame type = AT Command
 	frameData->data[1] = atData->id;
 	frameData->data[2] = atData->atCommand>>8;
 	frameData->data[3] = atData->atCommand & 0x00FF;
@@ -223,10 +250,52 @@ void XBEE::displayAtCommandResponseFrameData(atCommandResponseFrameData* atFrame
 	printf("\r\n");
 
 }
+/*
+bool XBEE::atCommandSuccessfullyExecuted(){
+	//read and reset.
+	if (this->atCommandSuccessfullyExecuted){
+		this->atCommandSuccessfullyExecuted = false;
+		return true;
+	}
+	return false;
+}
+*/
 void XBEE::processAtResponse(){
 	printf("at response status processed \r\n");
 	//printf("-->response to neighbourfinding (id:%d)",idOfFrameWaitingForResponse);
-	releaseSendLock();
+
+	switch (atResponse.atCommand){
+		case AT_DISCOVER_NODES_ND:
+			printf("found the list.");
+
+			//atCommandSuccessfullyExecuted =true;
+			break;
+
+		case AT_MAC_HEIGH_SH:
+			for (uint8_t i =0;i<4;i++){
+				senderXbee.address[i] = atResponse.responseData[i];
+			}
+			releaseSendLock();
+			break;
+
+		case AT_MAC_LOW_SL:
+			for (uint8_t i =0;i<4;i++){
+				senderXbee.address[i+4] = atResponse.responseData[i];
+			}
+			releaseSendLock();
+			break;
+
+		default:
+			break;
+
+	}
+	/*
+	uint8_t responseData [AT_DATA_SIZE];
+	uint16_t responseDataLength = 0;
+	uint8_t id = 0;
+	uint8_t status = 0;
+	*/
+
 }
 // ------------------------------------------------------------
 //  XBEE administration
@@ -234,7 +303,6 @@ void XBEE::processAtResponse(){
 
 void XBEE::refresh(){
 	//check if package received.
-
 	//process
 	processReceivedFrame();
 }
@@ -250,6 +318,12 @@ void XBEE::stats(){
 		printf("slot: %d, buffer:%d\r\n",i,this->receiveFrameBuffersToBeProcessed[i]);
 	}
 }
+
+
+
+// ------------------------------------------------------------
+//XBEE frame functions
+// ------------------------------------------------------------
 
 bool XBEE::apiFrameIsValid(frameReceive* package){
 	//test checksum of received frame
@@ -289,11 +363,6 @@ void XBEE::displayFrame(frame* frame){
 }
 
 
-
-
-
-
-
 // ------------------------------------------------------------
 //  XBEE send
 // ------------------------------------------------------------
@@ -305,25 +374,17 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 	if (!senderXbeeLockedWaitingForResponse  ){ //&& !sendingFrameIsBusy
 
 		if (frameData->data[1]){ //if ID is not zero, wait for response
-			printf("will lock sending until response arrived.");
+			//printf("will lock sending until response arrived.");
 			senderXbeeLockedWaitingForResponse = true;
 			idOfFrameWaitingForResponse = frameData->data[1];
 		}
 
-		//sendingFrameIsBusy = true;
+		frameToSend.frame[0] = 0x7E; //start delimiter
+		frameToSend.frame[1] = frameData->length >>8; //frame data length msb
+		frameToSend.frame[2] = frameData->length & 0xFF; //frame data length lsb //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
 
-		//frameToSend = {};  //reset //https://stackoverflow.com/questions/15183429/c-completely-erase-or-reset-all-values-of-a-struct
-		//uint8_t test []= {0x7E, 0x00, 0x14, 0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x7D, 0x5E};//complete frame API2
-		//uint8_t test []= {0x10, 0x01, 0x00, 0x7D, 0x33, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36}; //escaped
-		//uint8_t test []= {0x10, 0x01, 0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
-
-		frameToSend.frame[0] = 0x7E;
-		frameToSend.frame[1] = frameData->length >>8;
-		frameToSend.frame[2] = frameData->length & 0xFF; //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
-
-		uint16_t buildFrameIndex = 3;
+		uint16_t buildFrameIndex = 3; //add frame data
 		for (uint8_t i=0; i<frameData->length; i++){
-			//escape frame
 			uint8_t byteToSend = frameData->data[i];
 			frameToSend.frame[buildFrameIndex] = frameData->data[i];
 			buildFrameIndex++;
@@ -331,7 +392,6 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 
 		//add checksum
 		frameToSend.frame[buildFrameIndex] = calculateCheckSum((uint8_t*)frameData->data, 0 ,frameData->length);
-
 		frameToSend.length = frameData->length + 4;
 
 		//escape frame
@@ -369,11 +429,13 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 			buildFrameIndex++;
 		}
 
-		/**/
-		printf("frame unescaped.\r\n");
-				for (uint8_t i = 0; i< frameToSend.length;i++){
-					printf("%02x ", frameToSend.frame[i]);
-				}
+
+		printf("send frame (before escaping):");
+		for (uint8_t i = 0; i< frameToSend.length;i++){
+			printf("%02x ", frameToSend.frame[i]);
+		}
+		printf("\r\n");
+				/*
 		printf("\r\nframe built.\r\n");
 			for (uint8_t i = 0; i< frameToSend.lengthEscaped;i++){
 				printf("%02x ", frameToSend.frameEscaped[i]);
@@ -403,6 +465,14 @@ uint8_t XBEE::getNextIdForSendFrame(bool awaitResponse){
 	return sendFrameIdCounter;
 }
 
+void XBEE::releaseSendLock(){
+	senderXbeeLockedWaitingForResponse = false;
+	idOfFrameWaitingForResponse = 0;
+}
+
+bool XBEE::sendingIsLocked(){
+	return senderXbeeLockedWaitingForResponse;
+}
 /*
 void XBEE::sendSendBuffer(){
 	if (!senderXbeeLockedWaitingForResponse){
@@ -447,7 +517,7 @@ void XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
 	if (!frameAvailableInFifoBuffer()){
 		//nothing to process.
-		printf("nothing here");
+		//printf("nothing here");
 		return;
 	}
 
@@ -462,12 +532,11 @@ void XBEE::processReceivedFrame(){
 	//getTypeOfFrame()
 
 	//check if it is a requested response.
-	if (frameType == 0x8B ){
+	if (frameType == XBEE_FRAME_TYPE_TRANSMIT_STATUS ){
 		if (transmitResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
 			processTransmitStatus();
-
 		}
-	}else if( frameType == 0x88){
+	}else if( frameType == XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE){
 		if (atResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
 			processAtResponse();
 			printf("at response");
@@ -517,9 +586,6 @@ void XBEE::deleteTopFrameInReceivedFifoBuffer(){
 		this->receiveFrameBuffersToBeProcessed[i] = this->receiveFrameBuffersToBeProcessed[i+1];
 	}
 	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
-
-
-
 }
 
 
