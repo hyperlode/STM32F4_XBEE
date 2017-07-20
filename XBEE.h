@@ -15,8 +15,16 @@
 #define AT_DATA_SIZE 100
 #define AT_FRAME_DATA_STARTINDEX 5
 
+//https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#containers/cont_at_cmd_addressing.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520commands%7C_____0
 #define AT_MAC_HEIGH_SH 0x5348
 #define AT_MAC_LOW_SL 0x534C
+#define AT_MAC_DESTINATION_HIGH_DH 0x4448
+#define AT_MAC_DESTINATION_LOW_DL 0x444C
+
+#define AT_DISCOVER_NODES_ND 0x4E44    //searches nodes in the entire network. great for discovering radios //https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_nd.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____3
+#define AT_FIND_NEIGHBOURS_FN 0x464E    //same like ND but only one hop away! https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_fn.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____4
+
+#define AT_AVAILABLE_FREQUENCIES_AF 0x4146
 
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
 #define API_MODE 2 //ASSUME API2 is used (escape functionality built in). No other mode available.
@@ -39,9 +47,9 @@ struct message{
 */
 
 
-struct xbeeDevice{
+struct xbeeRadio{
 	uint8_t address [8]; //64 bit
-
+	bool isAddressSet = false;
 
 };
 
@@ -102,10 +110,14 @@ public:
 	bool apiFrameIsValid(frameReceive* package);
 
 
-	//AT
-	void sendLocalATCommand(uint16_t atCommand);
-	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
+	void setDestinationAddress();
+	uint8_t getNextIdForSendFrame(bool awaitResponse);
+	void sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse);
+	void processResponse();
 
+	//AT
+	void sendLocalATCommand(uint16_t atCommand, bool awaitResponse);
+	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
 	
 	//receive frame
 	void receiveFrame(char receivedByte);
@@ -120,12 +132,12 @@ public:
 
 	//send frame
 	void sendPackage(char charToSend);
-	void sendSendBuffer();
+	//void sendSendBuffer();
 	void sendTest();
 	void sendFrame(frame* frame);
 	void sendByte(uint8_t byteToSend);
 
-	void buildFrame(frameData* frameData);
+	bool buildAndSendFrame(frameData* frameData);
 
 
 
@@ -144,10 +156,20 @@ private:
 	frameReceive test;
 
 	
+
+	uint8_t idOfNeighBoursFindCommand; //record the id of this command while waiting for response.
+
 	bool sendingFrameIsBusy = false;
+	bool senderXbeeLockedWaitingForResponse = false;
+	uint8_t idOfAtCommandWaitingForResponse = 0;
+	uint8_t sendFrameIdCounter =0;
+
 	frame frameToSend;
 
 	atFrameData	atResponse;
+
+	xbeeRadio destinationXbee;
+	xbeeRadio senderXbee;
 
 };
 

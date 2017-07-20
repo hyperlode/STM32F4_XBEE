@@ -161,13 +161,22 @@ int main(void)
 						for (uint8_t i = 0;i< tmp.length;i++){
 							tmp.data[i] = testData[i];
 						}
-						radio.buildFrame(&tmp);
-						radio.sendSendBuffer();
+						radio.buildAndSendFrame(&tmp);
+
+
 					}else if (stringsAreEqual(serialBuffer, "attest")){
 
 						//radio.sendLocalATCommand(0x5348);
-						radio.sendLocalATCommand(AT_MAC_HEIGH_SH);
-						radio.sendLocalATCommand(AT_MAC_LOW_SL);
+						//radio.sendLocalATCommand(AT_MAC_HEIGH_SH);
+						//radio.sendLocalATCommand(AT_MAC_LOW_SL);
+						//radio.sendLocalATCommand(AT_AVAILABLE_FREQUENCIES_AF);
+						//radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH);
+						//radio.sendLocalATCommand(AT_MAC_DESTINATION_LOW_DL);
+
+						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND);
+						radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH, false);
+						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
+
 
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						//radio.receiveBuffer_Readout_Flush();
