@@ -57,20 +57,36 @@ struct xbeeRadio{
 //http://docs.digi.com/display/RFKitsCommon/Frame+structure
 struct frameData{
 	uint16_t length = 0;
-	uint8_t frameType;
+	//uint8_t frameType;
 	uint8_t data [RECEIVE_BUFFER_SIZE+1];
 	//uint8_t destinationAddress [8];
 
 };
 
+
+struct transmitStatusFrame{
+	uint8_t id = 0;
+	uint8_t status = 0;
+};
+
+struct atCommandResponseFrameData{
+	//same struct used for command and command response.
+	uint16_t atCommand = INVALID_AT_COMMAND;
+	uint8_t responseData [AT_DATA_SIZE];
+	uint16_t responseDataLength = 0;
+	uint8_t id = 0;
+	uint8_t status = 0;
+};
+
+
 struct atFrameData{
-	bool isResponse;
+	//same struct used for command and command response.
+	//bool isResponse;
 	uint16_t atCommand = INVALID_AT_COMMAND;
 	uint8_t data [AT_DATA_SIZE];
 	uint16_t dataLength = 0;
 	uint8_t id = 0;
-	uint8_t status = 0;
-
+	//uint8_t status = 0;
 };
 
 struct frameReceive{
@@ -105,29 +121,37 @@ public:
 	void refresh();
 	void stats();
 	void displayFrame(frame* frame);
-	void displayAtFrameData(atFrameData* atFrame);
+
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);
 
 
 	void setDestinationAddress();
 	uint8_t getNextIdForSendFrame(bool awaitResponse);
+
+
+	//transmit request
+	void processTransmitStatus();
 	void sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse);
-	void processResponse();
 
 	//AT
 	void sendLocalATCommand(uint16_t atCommand, bool awaitResponse);
 	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
+	void processAtResponse();
+	void displayAtCommandResponseFrameData(atCommandResponseFrameData* atFrame);
+	void displayAtFrameData(atFrameData* atFrame);
 	
 	//receive frame
 	void receiveFrame(char receivedByte);
 	void displayTopFrameInReceivedFifoBuffer(frameReceive* package);
-	void parseTopFrameInReceivedFifoBuffer(frameReceive* package);
+	uint8_t parseFrame(frameReceive* package);
 
 	void receiveInterruptHandler(char c);
 	void processReceivedFrame();
+
+	bool frameAvailableInFifoBuffer();
 	void deleteTopFrameInReceivedFifoBuffer();
-	int16_t getTopFrameInReceivedFifoBuffer();
+	frameReceive* getTopFrameInReceivedFifoBuffer();
 	
 
 	//send frame
@@ -137,11 +161,13 @@ public:
 	void sendFrame(frame* frame);
 	void sendByte(uint8_t byteToSend);
 
+	void releaseSendLock();
 	bool buildAndSendFrame(frameData* frameData);
 
 
 
-
+	xbeeRadio destinationXbee;
+		xbeeRadio senderXbee;
 private:
 	uint32_t baud;
 
@@ -161,15 +187,14 @@ private:
 
 	bool sendingFrameIsBusy = false;
 	bool senderXbeeLockedWaitingForResponse = false;
-	uint8_t idOfAtCommandWaitingForResponse = 0;
+	uint8_t idOfFrameWaitingForResponse = 0;
 	uint8_t sendFrameIdCounter =0;
 
 	frame frameToSend;
 
-	atFrameData	atResponse;
+	atCommandResponseFrameData	atResponse;
+	transmitStatusFrame transmitResponse;
 
-	xbeeRadio destinationXbee;
-	xbeeRadio senderXbee;
 
 };
 

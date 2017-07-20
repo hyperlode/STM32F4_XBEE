@@ -109,12 +109,24 @@ void XBEE::sendAtCommandAndLockXbeeUntilResponse(uint16_t atCommand){
 }
 */
 
-void XBEE::processResponse(){
 
 
+void XBEE::processTransmitStatus(){
 
-	printf("-->response to neighbourfinding.");
+
+	if (transmitResponse.status == 0x00){
+		printf("transmit success (id:%d)\r\n",transmitResponse.id);
+	}else{
+		printf("transmit status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
+	}
+
+
+	releaseSendLock();
+}
+
+void XBEE::releaseSendLock(){
 	senderXbeeLockedWaitingForResponse = false;
+	idOfFrameWaitingForResponse = 0;
 }
 
 void XBEE::setDestinationAddress(){
@@ -127,14 +139,12 @@ void XBEE::setDestinationAddress(){
 //------------------
 
 //send transmit request
-
 void XBEE::sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse){
 	//frame type: 0X10 transmit request
 	frameData frameData;
 	frameData.length = 14 + messageLength;
 
-	frameData.data[0] = 0x01; //frame type = Transmit request
-
+	frameData.data[0] = 0x10; //frame type = Transmit request
 	frameData.data[1] = getNextIdForSendFrame(awaitResponse);
 
 	//destination address
@@ -151,27 +161,11 @@ void XBEE::sendMessageToDestination(uint8_t* message, uint16_t messageLength, bo
 	for (uint16_t i = 0;i<messageLength; i++){
 		frameData.data[14 + i] = message[i];
 	}
-
-
-
 	buildAndSendFrame(&frameData);
-
-}
-
-
-uint8_t XBEE::getNextIdForSendFrame(bool awaitResponse){
-	if (!awaitResponse){
-		return 0;
-	}
-	sendFrameIdCounter++;
-	if (sendFrameIdCounter == 0){
-		sendFrameIdCounter++; //should never be zero. (zero is for messages that do not require a response)
-	}
-	return sendFrameIdCounter;
 }
 
 //---------------
-//AT Commands
+//AT Command mode
 //void XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* payload ){
 void XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 	// frame type: 0x08 AT Command
@@ -179,7 +173,7 @@ void XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 	printf("---sending AT command (please wait)---\r\n");
 	frameData frameData;
 	atFrameData atData;
-	atData.isResponse = false;
+
 	atData.atCommand = atCommand;
 	//atData.data [AT_DATA_SIZE];
 	atData.dataLength = 0;
@@ -190,7 +184,7 @@ void XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 
 	atFrameDataToFrameData(&atData,&frameData);
 
-	buildAndSendFrame(&frameData	);
+	buildAndSendFrame(&frameData);
 
 	//displayFrame(&frameToSend);
 	printf("---AT command sent---\r\n");
@@ -198,18 +192,42 @@ void XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 
 void XBEE::atFrameDataToFrameData(atFrameData* atData, frameData* frameData){
 	//translate atFrame to framedata of an API package.
-	if (atData->isResponse){
-		printf("ASSERT ERROR: Not available , responses are typically sent from the XBEE. Why would you like to parse this at response to framedata (are you sure?)? \r\n");
 
-	}else{
-		frameData->length = 4;
-		frameData->data[0] = 0x08; //frame type = AT Command
-		frameData->data[1] = atData->id;
-		frameData->data[2] = atData->atCommand>>8;
-		frameData->data[3] = atData->atCommand & 0x00FF;
-	}
+	frameData->length = 4;
+	frameData->data[0] = 0x08; //frame type = AT Command
+	frameData->data[1] = atData->id;
+	frameData->data[2] = atData->atCommand>>8;
+	frameData->data[3] = atData->atCommand & 0x00FF;
+
 }
 
+void XBEE::displayAtFrameData(atFrameData* atFrame){
+	printf("display at command frame: \r\n");
+	printf("type: AT command\r\n");
+	printf("id: %d\r\n",atFrame->id);
+	printf("command: %c%c\r\n", atFrame->atCommand>>8, atFrame->atCommand& 0x00FF );
+
+}
+
+void XBEE::displayAtCommandResponseFrameData(atCommandResponseFrameData* atFrame){
+	printf("display at command response frame: \r\n");
+
+	printf("type: AT command response\r\n");
+	printf("id: %d\r\n",atFrame->id);
+	printf("command: %c%c\r\n", atFrame->atCommand>>8, atFrame->atCommand& 0x00FF );
+	printf("status: %d\r\n",atFrame->status);
+	printf("data: ");
+	for (uint8_t i = 0; i< atFrame->responseDataLength;i++){
+		printf("%02x ",atFrame->responseData[i]);
+	}
+	printf("\r\n");
+
+}
+void XBEE::processAtResponse(){
+	printf("at response status processed \r\n");
+	//printf("-->response to neighbourfinding (id:%d)",idOfFrameWaitingForResponse);
+	releaseSendLock();
+}
 // ------------------------------------------------------------
 //  XBEE administration
 // ------------------------------------------------------------
@@ -270,26 +288,10 @@ void XBEE::displayFrame(frame* frame){
 	printf("\r\n");
 }
 
-void XBEE::displayAtFrameData(atFrameData* atFrame){
-	printf("display at frame: \r\n");
-	if (atFrame->isResponse){
-		printf("type: AT command response\r\n");
-		printf("id: %d\r\n",atFrame->id);
-		printf("command: %c%c\r\n", atFrame->atCommand>>8, atFrame->atCommand& 0x00FF );
-		printf("status: %d\r\n",atFrame->status);
-		printf("data: ");
-		for (uint8_t i = 0; i< atFrame->dataLength;i++){
-			printf("%02x ",atFrame->data[i]);
-		}
-		printf("\r\n");
 
-	}else{
-		printf("type: AT command\r\n");
-		printf("id: %d\r\n",atFrame->id);
-		printf("command: %c%c\r\n", atFrame->atCommand>>8, atFrame->atCommand& 0x00FF );
-	}
 
-}
+
+
 
 
 // ------------------------------------------------------------
@@ -299,7 +301,15 @@ void XBEE::displayAtFrameData(atFrameData* atFrame){
 bool XBEE::buildAndSendFrame(frameData* frameData){
 
 	//lock the xbee until message sent, or timeout
+
 	if (!senderXbeeLockedWaitingForResponse  ){ //&& !sendingFrameIsBusy
+
+		if (frameData->data[1]){ //if ID is not zero, wait for response
+			printf("will lock sending until response arrived.");
+			senderXbeeLockedWaitingForResponse = true;
+			idOfFrameWaitingForResponse = frameData->data[1];
+		}
+
 		//sendingFrameIsBusy = true;
 
 		//frameToSend = {};  //reset //https://stackoverflow.com/questions/15183429/c-completely-erase-or-reset-all-values-of-a-struct
@@ -359,7 +369,7 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 			buildFrameIndex++;
 		}
 
-		/*
+		/**/
 		printf("frame unescaped.\r\n");
 				for (uint8_t i = 0; i< frameToSend.length;i++){
 					printf("%02x ", frameToSend.frame[i]);
@@ -368,7 +378,7 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 			for (uint8_t i = 0; i< frameToSend.lengthEscaped;i++){
 				printf("%02x ", frameToSend.frameEscaped[i]);
 			}
-		*/
+		/**/
 		sendFrame(&frameToSend);
 		return true;
 	}else{
@@ -382,6 +392,16 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 
 }
 
+uint8_t XBEE::getNextIdForSendFrame(bool awaitResponse){
+	if (!awaitResponse){
+		return 0;
+	}
+	sendFrameIdCounter++;
+	if (sendFrameIdCounter == 0){
+		sendFrameIdCounter++; //should never be zero. (zero is for messages that do not require a response)
+	}
+	return sendFrameIdCounter;
+}
 
 /*
 void XBEE::sendSendBuffer(){
@@ -425,48 +445,71 @@ void XBEE::sendByte(uint8_t byteToSend){
 
 void XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
-	int16_t bufferToProcess = getTopFrameInReceivedFifoBuffer();
-	if (bufferToProcess == NOTHING_TO_BE_PROCESSED){
+	if (!frameAvailableInFifoBuffer()){
 		//nothing to process.
 		printf("nothing here");
 		return;
 	}
 
-	//process package
-	displayTopFrameInReceivedFifoBuffer(&this->receiveFrameBuffers[bufferToProcess]);
-	parseTopFrameInReceivedFifoBuffer(&this->receiveFrameBuffers[bufferToProcess]);
+	frameReceive* fifoTopFrame = getTopFrameInReceivedFifoBuffer();
+
+	//process top frame in fifo buffer
+	displayTopFrameInReceivedFifoBuffer(fifoTopFrame);
+	uint8_t frameType = parseFrame(fifoTopFrame);
+	apiFrameIsValid(fifoTopFrame);
+
+	//check type of frame.
+	//getTypeOfFrame()
 
 	//check if it is a requested response.
-	if (atResponse.id == idOfAtCommandWaitingForResponse && senderXbeeLockedWaitingForResponse){
-		processResponse();
+	if (frameType == 0x8B ){
+		if (transmitResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
+			processTransmitStatus();
+
+		}
+	}else if( frameType == 0x88){
+		if (atResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
+			processAtResponse();
+			printf("at response");
+		}
+	}else{
+		printf("frame is not a response %d, %d, %d \r\n", atResponse.id ,idOfFrameWaitingForResponse,senderXbeeLockedWaitingForResponse);
 	}
 
-	apiFrameIsValid(&this->receiveFrameBuffers[bufferToProcess]);
-
 	deleteTopFrameInReceivedFifoBuffer();
-	printf ("buffer processed and released: %d\r\n", bufferToProcess);
 
-
+	printf("finished processing top frame.");
 
 }
 
 
-int16_t XBEE::getTopFrameInReceivedFifoBuffer(){
+bool XBEE::frameAvailableInFifoBuffer(){
 	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
 	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
-		bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
-		return bufferToProcess;
+		return true;
 	}else{
-		printf ("nothing to process... \r\n");
-		return NOTHING_TO_BE_PROCESSED;
+		return false;
+	}
+}
+
+frameReceive* XBEE::getTopFrameInReceivedFifoBuffer(){
+	if(frameAvailableInFifoBuffer()){
+		int16_t bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
+		return &this->receiveFrameBuffers[bufferToProcess];
+	}else{
+		printf ("assert ERROR: (check if buffer available before calling this function) nothing to process... \r\n");
+		//return;
 	}
 }
 
 void XBEE::deleteTopFrameInReceivedFifoBuffer(){
-	int16_t bufferToProcess = getTopFrameInReceivedFifoBuffer();
-	if (bufferToProcess == NOTHING_TO_BE_PROCESSED){
-			return;
-		}
+	if(!frameAvailableInFifoBuffer()){
+		printf ("assert ERROR: (check if buffer available before calling this function) nothing to process... \r\n");
+		//return;
+	}
+
+	int16_t bufferToProcess = this->receiveFrameBuffersToBeProcessed[0];
+	this->receiveFrameBuffersIsLocked[bufferToProcess] =false; //release lock
 
 	//delete package
 	//move all elements one step to the front, make last slot empty.
@@ -474,21 +517,34 @@ void XBEE::deleteTopFrameInReceivedFifoBuffer(){
 		this->receiveFrameBuffersToBeProcessed[i] = this->receiveFrameBuffersToBeProcessed[i+1];
 	}
 	this->receiveFrameBuffersToBeProcessed[NUMBER_OF_RECEIVEBUFFERS-1] = NOTHING_TO_BE_PROCESSED;
-	this->receiveFrameBuffersIsLocked[bufferToProcess] =false;
+
+
+
 }
-void XBEE::parseTopFrameInReceivedFifoBuffer (frameReceive* frame){
+
+
+uint8_t XBEE::parseFrame (frameReceive* frame){
+
+	uint8_t frameType = frame->frame[FRAME_FRAMEDATA_STARTINDEX];
+
 	//AT response parsing
-	if (frame->frame[FRAME_FRAMEDATA_STARTINDEX] == 0x88){
+	if (frameType == 0x88){
 		printf("AT response frame.\r\n");
 		atResponse.id = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
 		atResponse.atCommand = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 2] <<8 | frame->frame[FRAME_FRAMEDATA_STARTINDEX + 3];
 		atResponse.status = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 4];
-		atResponse.dataLength = frame->lengthFrameData - AT_FRAME_DATA_STARTINDEX;
-		for (uint16_t i = 0; i< atResponse.dataLength; i++){
-			atResponse.data[i] = frame->frame[FRAME_FRAMEDATA_STARTINDEX + AT_FRAME_DATA_STARTINDEX + i];
+		atResponse.responseDataLength = frame->lengthFrameData - AT_FRAME_DATA_STARTINDEX;
+		for (uint16_t i = 0; i< atResponse.responseDataLength; i++){
+			atResponse.responseData[i] = frame->frame[FRAME_FRAMEDATA_STARTINDEX + AT_FRAME_DATA_STARTINDEX + i];
 		}
-		displayAtFrameData(&atResponse);
+		displayAtCommandResponseFrameData(&atResponse);
+
+	}else if (frameType == 0x8B){
+		//transmit status
+		transmitResponse.id =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
+		transmitResponse.status =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 5];
 	}
+	return frameType;
 }
 
 void XBEE::displayTopFrameInReceivedFifoBuffer(frameReceive* frame){
@@ -501,13 +557,13 @@ void XBEE::displayTopFrameInReceivedFifoBuffer(frameReceive* frame){
 	}
 
 	//receiveFrameBuffers
-	printf("raw frame (unescaped):\r\n");
+	printf("raw frame (unescaped): ");
 	for (uint8_t i = 0; i< frame->frameRecordIndex; i++)
 	{
 		printf("%02X ", frame->frame[i]);
 	}
 
-	printf("\r\n frameData:\r\n");
+	printf("\r\n only frameData:");
 	for (uint8_t i = 0; i< frame->lengthFrameData; i++)
 	{
 		printf("%02X ", frame->frame[i + FRAME_FRAMEDATA_STARTINDEX]);

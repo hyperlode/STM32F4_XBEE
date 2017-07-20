@@ -122,6 +122,10 @@ int main(void)
 	}
 /**/
 
+	for (uint8_t i = 0; i<8;i++){
+		radio.destinationXbee.address[i] = destinationAddress[i];
+	}
+
 	bool isInit = false;
 
 	millisMemory_outputToSerial = millis;
@@ -153,17 +157,20 @@ int main(void)
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
 					}else if (stringsAreEqual(serialBuffer, "txtest")){
+/*
 
-						//uint8_t test []= {0x10, 0x01, 0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
 						frameData tmp;
 						tmp.length = 20;
-
 						for (uint8_t i = 0;i< tmp.length;i++){
 							tmp.data[i] = testData[i];
 						}
 						radio.buildAndSendFrame(&tmp);
-
-
+*/
+						radio.sendMessageToDestination(destinationAddress, 8, true);
+					}else if (stringsAreEqual(serialBuffer, "yee")){
+						radio.sendMessageToDestination(destinationAddress, 8, false);
+					}else if (stringsAreEqual(serialBuffer, "xbeeND")){
+						radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
 					}else if (stringsAreEqual(serialBuffer, "attest")){
 
 						//radio.sendLocalATCommand(0x5348);
@@ -174,7 +181,7 @@ int main(void)
 						//radio.sendLocalATCommand(AT_MAC_DESTINATION_LOW_DL);
 
 						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND);
-						radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH, false);
+						radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH, true);
 						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
 
 
@@ -188,6 +195,8 @@ int main(void)
 								"available commands:\r\n"
 								"\txbee: Shows xbee receive statistics\r\n"
 								"\ttxtest: send data to xbee test\r\n"
+								"\tyee: send data to xbee test\r\n"
+								"\txbeeND: list up all active remote xbees\r\n"
 								"\tattest: send at data to xbee test\r\n"
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");
