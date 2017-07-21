@@ -96,12 +96,12 @@ int main(void)
 	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
 	radio.init(1,9600,&millis);
-/*
+
 	Menu mainMenu;
 	mainMenu.init();
 	mainMenu.addItem("checketuut", 1 , none);
 	mainMenu.addItem("tweede item", 2, integer);
-*/
+
 	FlagStatus flagTest;
 
 	//flagTest = SET;
@@ -155,7 +155,7 @@ int main(void)
 
 
 				}else if (serialBufferPosition>0){
-					//mainMenu.userInput(serialBuffer);
+					mainMenu.userInput(serialBuffer);
 
 
 					printf("command sent: %s\r\n", serialBuffer);
@@ -189,7 +189,7 @@ int main(void)
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						radio.stats();
 					}else if (stringsAreEqual(serialBuffer, "m")){
-						//mainMenu.display(menuString);
+						mainMenu.display(menuString);
 						//printf("%s",menuString);
 					}else if (stringsAreEqual(serialBuffer, "xbremotes")){
 						radio.searchActiveRemoteXbees(20000); //takes a while.
