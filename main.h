@@ -9,6 +9,7 @@
 
 #include "stm32f4xx_usart.h"
 #include "XBEE.h"
+#include "Menu.h"
 
 #ifdef __cplusplus
 	//#include "MachineControl.h"

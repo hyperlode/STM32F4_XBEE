@@ -121,6 +121,7 @@
     <File name="usb_lib" path="" type="2"/>
     <File name="EncoderToTimer.h" path="EncoderToTimer.h" type="1"/>
     <File name="STM32F4-Discovery/stm32f4_discovery_lis302dl.h" path="STM32F4-Discovery/stm32f4_discovery_lis302dl.h" type="1"/>
+    <File name="Menu.h" path="Menu.h" type="1"/>
     <File name="cmsis_lib/source/stm32f4xx_dac.c" path="cmsis_lib/source/stm32f4xx_dac.c" type="1"/>
     <File name="stdio/printf.c" path="stdio/printf.c" type="1"/>
     <File name="cmsis_lib/include/stm32f4xx_rcc.h" path="cmsis_lib/include/stm32f4xx_rcc.h" type="1"/>
@@ -164,6 +165,7 @@
     <File name="XBEE.cpp" path="XBEE.cpp" type="1"/>
     <File name="usb_lib/otg/usb_defines.h" path="usb_lib/otg/usb_defines.h" type="1"/>
     <File name="usb_lib/cdc" path="" type="2"/>
+    <File name="Menu.cpp" path="Menu.cpp" type="1"/>
     <File name="cmsis_boot" path="" type="2"/>
     <File name="cmsis_lib/include/stm32f4xx_syscfg.h" path="cmsis_lib/include/stm32f4xx_syscfg.h" type="1"/>
     <File name="STM32F4-Discovery/pdm_filter.h" path="STM32F4-Discovery/pdm_filter.h" type="1"/>
