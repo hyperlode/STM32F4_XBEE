@@ -96,7 +96,12 @@ int main(void)
 	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
 	radio.init(1,9600,&millis);
-
+/*
+	Menu mainMenu;
+	mainMenu.init();
+	mainMenu.addItem("checketuut", 1 , none);
+	mainMenu.addItem("tweede item", 2, integer);
+*/
 	FlagStatus flagTest;
 
 	//flagTest = SET;
@@ -141,8 +146,8 @@ int main(void)
 		uint8_t theByte;
 		if (VCP_get_char(&theByte)){
 
-			if ( theByte == '\r' || theByte == '\n' ){
-				//these are the stop characters
+			if ( theByte == '\r' || theByte == '\n' ){//these are the stop characters
+
 				if (serialBufferOverflow){
 					serialBufferOverflow = false;
 					serialBufferPosition =0;
@@ -150,8 +155,14 @@ int main(void)
 
 
 				}else if (serialBufferPosition>0){
+					//mainMenu.userInput(serialBuffer);
+
 
 					printf("command sent: %s\r\n", serialBuffer);
+
+
+
+
 
 					//interprete command
 					if (stringsAreEqual(serialBuffer, "lode")){
@@ -177,6 +188,9 @@ int main(void)
 
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						radio.stats();
+					}else if (stringsAreEqual(serialBuffer, "m")){
+						//mainMenu.display(menuString);
+						//printf("%s",menuString);
 					}else if (stringsAreEqual(serialBuffer, "xbremotes")){
 						radio.searchActiveRemoteXbees(20000); //takes a while.
 						radio.displayNeighbours();
@@ -191,7 +205,7 @@ int main(void)
 								"\txblocadd: get the local address from the xbee and set it in the program \r\n"
 								"\txbeeND: list up all active remote xbees\r\n"
 								"\txbremotes: list up all active remote xbees done better\r\n"
-
+								"\tm: test menu\r\n"
 								"\tattest: send at data to xbee test\r\n"
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");

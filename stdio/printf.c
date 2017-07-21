@@ -25,7 +25,7 @@ void PrintChar(char c)
 }
 
 /** Maximum string size allowed (in bytes). */
-#define MAX_STRING_SIZE         100
+#define MAX_STRING_SIZE         1000 //default is 100, lode augmented.
 
 
 /** Required for proper compilation. */

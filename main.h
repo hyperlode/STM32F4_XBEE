@@ -59,6 +59,7 @@
 
 	XBEE* pRadio;
 
+	char menuString [MENU_SCREEN_TEXT_MAX];
 
 	bool stringsAreEqual(char* A, char*B);
 
