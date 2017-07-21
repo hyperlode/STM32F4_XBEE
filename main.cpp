@@ -95,7 +95,7 @@ int main(void)
 
 	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
-	radio.init(1,9600);
+	radio.init(1,9600,&millis);
 
 	FlagStatus flagTest;
 
@@ -160,9 +160,10 @@ int main(void)
 						radio.sendMessageToDestination(destinationAddress, 8, true);
 
 					}else if (stringsAreEqual(serialBuffer, "xblocadd")){
-						radio.setLocalXbeeAddress();
+						printf("millis: %d\r\n", millis);
+						bool success = radio.setLocalXbeeAddress(20);
+						printf("address set(1 if success))?: %d",success);
 						//radio.sendMessageToDestination(destinationAddress, 8, false);
-
 					}else if (stringsAreEqual(serialBuffer, "xbeeND")){
 						radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
 
@@ -175,8 +176,11 @@ int main(void)
 
 
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
-						//radio.receiveBuffer_Readout_Flush();
 						radio.stats();
+					}else if (stringsAreEqual(serialBuffer, "xbremotes")){
+						radio.searchActiveRemoteXbees(20000); //takes a while.
+						radio.displayNeighbours();
+
 					}else if (stringsAreEqual(serialBuffer, "process")){
 						radio.processReceivedFrame();
 					}else{
@@ -186,6 +190,8 @@ int main(void)
 								"\ttxtest: send data to xbee test\r\n"
 								"\txblocadd: get the local address from the xbee and set it in the program \r\n"
 								"\txbeeND: list up all active remote xbees\r\n"
+								"\txbremotes: list up all active remote xbees done better\r\n"
+
 								"\tattest: send at data to xbee test\r\n"
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");

@@ -12,7 +12,8 @@ XBEE::XBEE(){
 	}
 }
 
-void XBEE::init(uint8_t UART_Number, uint32_t baud){
+void XBEE::init(uint8_t UART_Number, uint32_t baud, uint32_t* millis){
+	this->millis = millis;
 	if (UART_Number ==1){
 		//interrupt handler.
 		
@@ -113,27 +114,79 @@ void XBEE::sendAtCommandAndLockXbeeUntilResponse(uint16_t atCommand){
 
 //--------------------------------------------------
 
-bool XBEE::setLocalXbeeAddress(){
+bool XBEE::searchActiveRemoteXbees(uint32_t timeout_millis){
+
 	//set time out time
+	printf("millis: %d\r\n", *this->millis);
+	uint32_t start_millis = *this->millis;
+
+	//reset list of all neighbours
+	for (uint8_t i = 0; i< BUFFER_NEIGHBOUR_XBEES_SIZE; i++){
+		for (uint8_t j=0; j<XBEE_NAME_MAX_NUMBER_OF_CHARACTERS; j++){
+			neighbours[i].name[j] =  0x20;
+		}
+		neighbours[i].isValid = false;
+	}
+	this->numberOfNeighbours = 0;
+
+	//repopulate list
+	if (! sendAtCommandAndAwaitWithResponse(AT_FIND_NEIGHBOURS_FN, timeout_millis) ){
+		//this command can have multiple responses, one from each remote xbee. so, let's keep the lock in place until it times out. (for the sake of simplicity), if messages appear later, they should be handeled properly in the at response processing.
+
+		//return false;
+	}
+
+
+/*
+	printf("local xbee address set: ");
+	for (uint8_t i=0 ; i<8 ; i++){
+		printf ("%02x ", senderXbee.address[i]);
+	}
+
+*/
+	printf("\r\n");
+	printf("millis: %d\r\n", *this->millis);
+	return true;
+}
+
+void XBEE::displayNeighbours(){
+	if (this->numberOfNeighbours ==0){
+		printf("No neighbours \r\n");
+	}else{
+		printf("Neighbours of this XBEE: \r\n");
+		for (uint8_t i = 0; i< BUFFER_NEIGHBOUR_XBEES_SIZE; i++){
+			if (neighbours[i].isValid){
+				for (uint8_t j=0; j<XBEE_NAME_MAX_NUMBER_OF_CHARACTERS; j++){
+					printf( "%c.", neighbours[i].name[j]) ;
+					//printf(neighbours[i].name[j]);
+				}
+
+				printf(" : ");
+				for (uint8_t j=0; j<8; j++){
+					printf( "%02x ", neighbours[i].address[j]) ;
+				}
+
+				printf("\r\n");
+			}
+		}
+	}
+}
+
+
+bool XBEE::setLocalXbeeAddress(uint32_t timeout_millis){
+
+	//set time out time
+	printf("millis: %d\r\n", *this->millis);
+	uint32_t start_millis = *this->millis;
 
 	//get msb bytes.
-	if (!sendLocalATCommand( AT_MAC_HEIGH_SH , true)){
+
+	if (! sendAtCommandAndAwaitWithResponse(AT_MAC_HEIGH_SH , timeout_millis) ){
 		return false;
 	}
 
-	//get low byte --> send at command.
-	while (sendingIsLocked()){
-		refresh();
-		//wait
-	}
-
-	if (!sendLocalATCommand( AT_MAC_LOW_SL , true)){
+	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_LOW_SL, start_millis + timeout_millis - *this->millis) ){
 		return false;
-	}
-
-	while (sendingIsLocked()){
-		refresh();
-		//wait
 	}
 
 	printf("local xbee address set: ");
@@ -141,15 +194,15 @@ bool XBEE::setLocalXbeeAddress(){
 		printf ("%02x ", senderXbee.address[i]);
 	}
 	printf("\r\n");
+	printf("millis: %d\r\n", *this->millis);
 	return true;
 }
 
-void XBEE::setDestinationAddress(){
-	for (uint8_t i=0; i<8; i++){
-		destinationXbee.address[i] =  0x00;
-	}
-	destinationXbee.isAddressSet = true;
-}
+
+
+
+
+
 
 //------------------
 
@@ -217,6 +270,33 @@ bool XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 	return success;
 }
 
+
+bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t timeout_millis){
+	//execute full at command with response.
+
+	//set time out time
+	uint32_t start_millis = *this->millis;
+	if (!sendLocalATCommand( atCommand , true)){
+		printf("sending at command failed...\r\n");
+		return false;
+	}
+
+	//check response
+	while (sendingIsLocked() && *this->millis < start_millis + timeout_millis ){
+		//sendLock is released if at response is received and processed.
+		refresh();
+	}
+
+	//check if timed out
+	if (*this->millis > start_millis + timeout_millis ){
+		printf("processing or awaiting at response timed out...\r\n");
+		releaseSendLock(); //reset lock (knowing that we will send out a failed message...) if the response arrives anyways, it WILL be processed.
+		return false;
+	}
+	return true;
+}
+
+
 void XBEE::atFrameDataToFrameData(atFrameData* atData, frameData* frameData){
 	//translate atFrame to framedata of an API package.
 
@@ -265,12 +345,6 @@ void XBEE::processAtResponse(){
 	//printf("-->response to neighbourfinding (id:%d)",idOfFrameWaitingForResponse);
 
 	switch (atResponse.atCommand){
-		case AT_DISCOVER_NODES_ND:
-			printf("found the list.");
-
-			//atCommandSuccessfullyExecuted =true;
-			break;
-
 		case AT_MAC_HEIGH_SH:
 			for (uint8_t i =0;i<4;i++){
 				senderXbee.address[i] = atResponse.responseData[i];
@@ -284,6 +358,41 @@ void XBEE::processAtResponse(){
 			}
 			releaseSendLock();
 			break;
+
+		case AT_DISCOVER_NODES_ND:
+			printf("not supported.\r\n");
+			break;
+
+		case AT_FIND_NEIGHBOURS_FN:
+
+			if (atResponse.status==0){
+
+				//record the address
+				for (uint8_t i=0;i<8;i++){
+					neighbours[this->numberOfNeighbours].address[i] = atResponse.responseData[2+i];
+				}
+				uint8_t i = 15;
+
+				//record the name
+				bool charValid = true;
+				for (uint8_t i=0;i<XBEE_NAME_MAX_NUMBER_OF_CHARACTERS;i++){
+					if (atResponse.responseData[10 + i] == 0){
+						charValid = false;
+					}
+
+					if (charValid){
+						neighbours[this->numberOfNeighbours].name[i] = atResponse.responseData[10 + i];
+					}else{
+						neighbours[this->numberOfNeighbours].name[i] = 0x20; //space.
+					}
+				}
+				neighbours[this->numberOfNeighbours].isValid = true;
+
+				//increase the number of neighbours.
+				this->numberOfNeighbours ++;
+				printf("number of neighbours: %d" , this->numberOfNeighbours);
+			}
+
 
 		default:
 			break;
