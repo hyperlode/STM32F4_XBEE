@@ -9,10 +9,14 @@
 
 #include "stm32f4xx_usart.h"
 #include "XBEE.h"
-#include "Menu.h"
+
+#include "ApplicationController.h"
 
 #ifdef __cplusplus
 	//#include "MachineControl.h"
+
+
+
 
 	#include <stdio.h>
 	extern "C"
@@ -59,7 +63,9 @@
 
 	XBEE* pRadio;
 
-	char menuString [MENU_SCREEN_TEXT_MAX];
+	ApplicationController xbeePeerToPeerDemo;
+
+
 
 	bool stringsAreEqual(char* A, char*B);
 

@@ -41,7 +41,16 @@ void Menu::addItem(char* text, uint8_t commandId, argument_type argumentType ){
 
 }
 
-void Menu::display(char* textHandle){
+void Menu::display(){
+	char* output;
+	menuAsString(output);
+	uint16_t i=0;
+	while (output[i]!= '\0'){
+		printf("%c",output[i++]);
+	}
+}
+
+void Menu::menuAsString(char* textHandle){
 	int32_t index=0;
 	for (uint8_t i = 0; i< this->numberOfItems;i++){
 
@@ -80,9 +89,11 @@ void Menu::userInput(char* input){
 	if (!waitingForArgument){
 		//first digit is the chosen menuItem
 		uint8_t choice  = input[0]-48;
-		if (choice > this->numberOfItems || input[0] < 48){
-			printf("Invalid Choice...please chose a number between 0 and %d \r\n (your input: %s)", this->numberOfItems-1,input);
-		}else{
+		if (input[0] == 109 ){
+			display();
+		}else if (choice > this->numberOfItems || input[0] < 48){
+			printf("Invalid Choice...please choose a number between 0 and %d \r\n (your input was: %s)\r\nAlternatively press m to display the menu.", this->numberOfItems-1,input);
+		}else {
 
 			switch (items[choice].getArgument_type()){
 				case none:

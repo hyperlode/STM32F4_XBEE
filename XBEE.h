@@ -55,6 +55,7 @@ struct message{
 };
 */
 
+
 struct xbeeRadio{
 	uint8_t address [8]; //64 bit
 	bool isValid = false;

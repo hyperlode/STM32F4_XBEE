@@ -34,7 +34,8 @@ public:
 	Menu();
 	void init();
 	void refresh();
-	void display(char* textHandle);
+	void display();
+	void menuAsString(char* textHandle);
 
 	//void addItem(MenuItem* item);
 	void addItem(char* text, uint8_t commandId, argument_type argumentType);

@@ -77,6 +77,9 @@ int main(void)
 	machineControl.getCharFunctionPointer = &VCP_get_char;
 	/**/
 
+	xbeePeerToPeerDemo.init();
+
+
 	XBEE radio;
 	pRadio = &radio;
 
@@ -95,12 +98,10 @@ int main(void)
 
 	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
+
 	radio.init(1,9600,&millis);
 
-	Menu mainMenu;
-	mainMenu.init();
-	mainMenu.addItem("checketuut", 1 , none);
-	mainMenu.addItem("tweede item", 2, integer);
+
 
 	FlagStatus flagTest;
 
@@ -155,15 +156,11 @@ int main(void)
 
 
 				}else if (serialBufferPosition>0){
-					mainMenu.userInput(serialBuffer);
 
+					xbeePeerToPeerDemo.serialInput(serialBuffer);
 
 					printf("command sent: %s\r\n", serialBuffer);
-
-
-
-
-
+/*
 					//interprete command
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
@@ -189,8 +186,11 @@ int main(void)
 					}else if (stringsAreEqual(serialBuffer, "xbee")){
 						radio.stats();
 					}else if (stringsAreEqual(serialBuffer, "m")){
-						mainMenu.display(menuString);
-						printf("%s",menuString);
+
+						command alive;
+						alive.id = 10;
+						alive.argument_int = 100;
+						xbeePeerToPeerDemo.excecuteCommand(alive);
 					}else if (stringsAreEqual(serialBuffer, "xbremotes")){
 						radio.searchActiveRemoteXbees(20000); //takes a while.
 						radio.displayNeighbours();
@@ -210,7 +210,7 @@ int main(void)
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");
 					}
-
+*/
 					serialBufferPosition =0;
 					serialBuffer[serialBufferPosition]='\0';
 
@@ -238,6 +238,12 @@ int main(void)
 			}
 
 		}
+
+
+
+		//check for command
+		xbeePeerToPeerDemo.refresh();
+
 
 
 
