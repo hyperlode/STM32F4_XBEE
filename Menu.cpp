@@ -42,11 +42,11 @@ void Menu::addItem(char* text, uint8_t commandId, argument_type argumentType ){
 }
 
 void Menu::display(){
-	char* output;
+	char output [1000];
 	menuAsString(output);
 	uint16_t i=0;
-	while (output[i]!= '\0'){
-		printf("%c",output[i++]);
+	while (output[i]!= '\0' && i< 20){
+		printf("%c.",output[i++]);
 	}
 }
 
@@ -80,6 +80,7 @@ void Menu::menuAsString(char* textHandle){
 	}
 
 	textHandle[index++] = 0x00;
+	textHandle[index++] = '\0';
 
 	//printf ("menucharslength: %d\r\n",index);
 }
