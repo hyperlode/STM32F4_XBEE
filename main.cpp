@@ -6,7 +6,7 @@
 //-configurations-> link ->"don't use the standard system startup files"
 
 
-#define HSE_VALUE ((uint32_t)8000000) /* STM32 discovery uses a 8Mhz external crystal */
+#define HSE_VALUE ((uint32_t)8000000) /* STM32 discovery uses a 8Mhz external crystal */   //todo lode potential conflict redefining here?
 
 
 
@@ -190,7 +190,7 @@ int main(void)
 						radio.stats();
 					}else if (stringsAreEqual(serialBuffer, "m")){
 						mainMenu.display(menuString);
-						//printf("%s",menuString);
+						printf("%s",menuString);
 					}else if (stringsAreEqual(serialBuffer, "xbremotes")){
 						radio.searchActiveRemoteXbees(20000); //takes a while.
 						radio.displayNeighbours();

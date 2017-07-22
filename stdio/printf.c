@@ -25,7 +25,7 @@ void PrintChar(char c)
 }
 
 /** Maximum string size allowed (in bytes). */
-#define MAX_STRING_SIZE         100 //default is 100, lode tried to increase it to 1000, but it causes hard errors at some point! so, I now see it as very very dangerous! (ring of death)
+#define MAX_STRING_SIZE         100 //default is 100 DO NOT CHANGE 20170721, lode tried to increase it to 1000, but it causes hard errors at some point! so, I now see it as very very dangerous! (ring of death)
 
 
 /** Required for proper compilation. */
@@ -408,7 +408,7 @@ signed int vfprintf(FILE *pStream, const char *pFormat, va_list ap)
     char pError[] = "stdio.c: increase MAX_STRING_SIZE\n\r";
 
     /* Write formatted string in buffer */
-    if (vsprintf(pStr, pFormat, ap) >= MAX_STRING_SIZE) {
+   if (vsprintf(pStr, pFormat, ap) >= MAX_STRING_SIZE) {
 
         fputs(pError, stderr);
         while (1); /* Increase MAX_STRING_SIZE */

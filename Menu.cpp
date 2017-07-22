@@ -65,16 +65,14 @@ void Menu::display(char* textHandle){
 	uint8_t i = 0;
 	while (menuFooter[i] != '\0' ){
 		textHandle[index++] =  menuFooter[i];
-		printf (".%c",menuFooter[i]);
+		//printf (".%c",menuFooter[i]);
 		i++;
 
 	}
 
 	textHandle[index++] = 0x00;
-	//printf ("yoo");
-	printf ("menucharslength: %d\r\n",index);
 
-
+	//printf ("menucharslength: %d\r\n",index);
 }
 
 
