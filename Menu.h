@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 
-enum argument_type {none, integer, string };
+enum argument_type {none, integerPositive, string };
 
 
 struct command{

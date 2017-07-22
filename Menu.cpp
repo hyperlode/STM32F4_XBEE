@@ -150,7 +150,7 @@ void Menu::userInput(char* input){
 					printf("Menu %d activated \r\n", choice);
 					commandSelectedAndWaitingForRelease = true;
 					break;
-				case integer:
+				case integerPositive:
 					printf("Input a number:\r\n");
 					chosenItemWaitingForArgument = choice;
 					waitingForArgument = true;
@@ -173,7 +173,7 @@ void Menu::userInput(char* input){
 
 
 		switch(items[chosenItemWaitingForArgument].getArgument_type()){
-		case integer:
+		case integerPositive:
 		{
 			bool illegalInput = false;
 			int32_t value = 0;

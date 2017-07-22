@@ -77,11 +77,8 @@ int main(void)
 	machineControl.getCharFunctionPointer = &VCP_get_char;
 	/**/
 
-	xbeePeerToPeerDemo.init();
-
-
-	XBEE radio;
-	pRadio = &radio;
+	xbeePeerToPeerDemo.init(&millis);
+	pXbeePeerToPeerDemo = &xbeePeerToPeerDemo;
 
 
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
@@ -99,7 +96,6 @@ int main(void)
 	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
 
 
-	radio.init(1,9600,&millis);
 
 
 
@@ -128,9 +124,7 @@ int main(void)
 	}
 /**/
 
-	for (uint8_t i = 0; i<8;i++){
-		radio.destinationXbee.address[i] = destinationAddress[i];
-	}
+
 
 	bool isInit = false;
 
@@ -411,7 +405,8 @@ void OTG_FS_WKUP_IRQHandler(void)
 void USART1_IRQHandler()
 {
 	if (USART_GetITStatus(USART1, USART_IT_RXNE)){
-		pRadio->receiveInterruptHandler	( USART1->DR );
+		//pRadio->receiveInterruptHandler	( USART1->DR );
+		pXbeePeerToPeerDemo->XbeeUartInterruptHandler( USART1->DR );
 		//after handling, reenable interrupts
 		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
 	}
