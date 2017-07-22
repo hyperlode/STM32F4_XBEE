@@ -156,10 +156,10 @@ int main(void)
 
 
 				}else if (serialBufferPosition>0){
-
+					//printf("data string received: %s\r\n", serialBuffer);
 					xbeePeerToPeerDemo.serialInput(serialBuffer);
 
-					printf("command sent: %s\r\n", serialBuffer);
+
 /*
 					//interprete command
 					if (stringsAreEqual(serialBuffer, "lode")){

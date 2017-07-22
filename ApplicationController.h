@@ -6,11 +6,9 @@
 
 #include "Menu.h"
 
-struct command{
-	uint8_t id=0;
-	int32_t argument_int;
-	char* argument_str;
-};
+enum commandIds {test, printNonsense};
+
+
 
 
 class ApplicationController{
@@ -30,6 +28,7 @@ private:
 	bool isLocked = false;
 	char menuString [MENU_SCREEN_TEXT_MAX];
 	Menu mainMenu;
+
 
 
 };
