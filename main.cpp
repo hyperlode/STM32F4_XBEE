@@ -154,57 +154,19 @@ int main(void)
 					xbeePeerToPeerDemo.serialInput(serialBuffer);
 
 
-/*
+
 					//interprete command
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
-					}else if (stringsAreEqual(serialBuffer, "txtest")){
-						radio.sendMessageToDestination(destinationAddress, 8, true);
+						xbeePeerToPeerDemo.executeTestCommand();
 
-					}else if (stringsAreEqual(serialBuffer, "xblocadd")){
-						printf("millis: %d\r\n", millis);
-						bool success = radio.setLocalXbeeAddress(20);
-						printf("address set(1 if success))?: %d",success);
-						//radio.sendMessageToDestination(destinationAddress, 8, false);
-					}else if (stringsAreEqual(serialBuffer, "xbeeND")){
-						radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
-
-					}else if (stringsAreEqual(serialBuffer, "attest")){
-
-
-						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND);
-						radio.sendLocalATCommand(AT_MAC_DESTINATION_HIGH_DH, true);
-						//radio.sendLocalATCommand(AT_DISCOVER_NODES_ND, true);
-
-
-					}else if (stringsAreEqual(serialBuffer, "xbee")){
-						radio.stats();
-					}else if (stringsAreEqual(serialBuffer, "m")){
-
-						command alive;
-						alive.id = 10;
-						alive.argument_int = 100;
-						xbeePeerToPeerDemo.excecuteCommand(alive);
-					}else if (stringsAreEqual(serialBuffer, "xbremotes")){
-						radio.searchActiveRemoteXbees(20000); //takes a while.
-						radio.displayNeighbours();
-
-					}else if (stringsAreEqual(serialBuffer, "process")){
-						radio.processReceivedFrame();
 					}else{
 						printf("Invalid command received.\r\n"
-								"available commands:\r\n"
-								"\txbee: Shows xbee receive statistics\r\n"
-								"\ttxtest: send data to xbee test\r\n"
-								"\txblocadd: get the local address from the xbee and set it in the program \r\n"
-								"\txbeeND: list up all active remote xbees\r\n"
-								"\txbremotes: list up all active remote xbees done better\r\n"
-								"\tm: test menu\r\n"
-								"\tattest: send at data to xbee test\r\n"
+
 								"\tlode: Displays nonsense...\r\n"
 							"\tprocess: Process last received package \r\n");
 					}
-*/
+
 					serialBufferPosition =0;
 					serialBuffer[serialBufferPosition]='\0';
 

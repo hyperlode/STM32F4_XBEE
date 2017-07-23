@@ -18,33 +18,36 @@ void ApplicationController::init(uint32_t* millis){
 	//}
 
 	//populate menu
-	mainMenu.init();
+	//mainMenu.init();
+	//mainMenu.addItem("xbee STATS", xbeeStats, none);
+	/*
+	mainMenu.addItem("xbee Empty receive Buffers", xbeeClearReceiveBuffers , none);
 	mainMenu.addItem("int test", testInt , integerPositive);
 	mainMenu.addItem("string test", testStr, string);
 	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, none);
-	mainMenu.addItem("vier item", 4, integerPositive);
-	mainMenu.addItem("vijf item", 5, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("xbee process frames that arrived", xbeeProcess, none);
 
+	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("tweede item", 2, integerPositive);
+*/
 
 }
 
 void ApplicationController::refresh(){
+	/*
 	if (mainMenu.commandWaitingToBeExecuted()){
-		command hoitjes;
-		hoitjes = mainMenu.getPreparedCommand();
-		executeCommand(hoitjes);
+		command cmd;
+		cmd = mainMenu.getPreparedCommand();
+		executeCommand(cmd);
 		mainMenu.releaseMenu();
 	}
-
-
-
-	radio.processReceivedFrame();
+*/
+	//XBEE auto process received frames.
+	//radio.processReceivedFrame();
 
 
 }
@@ -57,15 +60,37 @@ void ApplicationController::executeCommand(command command){
 	case testStr:
 		printf("string test with arg: %s\r\n", command.argument_str);
 		break;
-	case testXbeeGetLocalAddress:
-		printf("xbee local address\r\n");
+	case xbeeClearReceiveBuffers:
+		radio.clearReceiveBuffers();
 		break;
+
+	case testXbeeGetLocalAddress:
+	{
+		printf("xbee local address\r\n");
+		printf("millis: %d\r\n", millis);
+		bool success = radio.setLocalXbeeAddress(20);
+		printf("address set(1 if success))?: %d",success);
+
+
+		break;
+	}
+	case xbeeProcess:
+	{
+		radio.processReceivedFrame();
+		break;
+	}
+	case xbeeStats:
+	{
+		radio.stats();
+		break;
+	}
+
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;
 	}
 
-	printf("command executed: %d \r\n", command.id);
+	printf("executed commandId : %d \r\n", command.id);
 
 
 }
@@ -78,13 +103,13 @@ void ApplicationController::XbeeUartInterruptHandler(char c){
 
 void ApplicationController::serialInput(char* input){
 
-	//mainMenu.display(menuString);
-	//printf("%s",menuString);
-	mainMenu.userInput(input);
+
+	//mainMenu.userInput(input);
 }
 
-void ApplicationController::excecuteCommand(command command){
-	printf("dat gaat hier goed, command id: %d",command.id);
+void ApplicationController::executeTestCommand(){
+	printf("dat gaat hier goed, command id...\r\n");
+	radio.stats();
 
 
 

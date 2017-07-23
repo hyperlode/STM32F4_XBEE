@@ -5,6 +5,10 @@
 const uint8_t atTest[] = {0x08, 0x01, 0x53, 0x48};
 
 XBEE::XBEE(){
+	clearReceiveBuffers();
+}
+
+void XBEE::clearReceiveBuffers(){
 	receiveBufferCounter = 0;
 	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
 		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
@@ -14,6 +18,7 @@ XBEE::XBEE(){
 
 void XBEE::init(uint8_t UART_Number, uint32_t baud, uint32_t* millis){
 	this->millis = millis;
+
 	if (UART_Number ==1){
 		//interrupt handler.
 		
@@ -107,9 +112,6 @@ void XBEE::sendAtCommandAndLockXbeeUntilResponse(uint16_t atCommand){
 	senderXbeeLockedWaitingForResponse = true;
 }
 */
-
-
-
 
 
 //--------------------------------------------------
@@ -624,12 +626,16 @@ void XBEE::sendByte(uint8_t byteToSend){
 
 void XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
+	/**/
 	if (!frameAvailableInFifoBuffer()){
 		//nothing to process.
-		//printf("nothing here");
+		printf("nothing here\r\n");
 		return;
-	}
+	}else{
+		printf("frame here!\r\n");
 
+	}
+/**/
 	frameReceive* fifoTopFrame = getTopFrameInReceivedFifoBuffer();
 
 	//process top frame in fifo buffer
@@ -664,6 +670,7 @@ void XBEE::processReceivedFrame(){
 bool XBEE::frameAvailableInFifoBuffer(){
 	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
 	if (this->receiveFrameBuffersToBeProcessed[0] != NOTHING_TO_BE_PROCESSED){
+		printf("frameavaaillblble...");
 		return true;
 	}else{
 		return false;
