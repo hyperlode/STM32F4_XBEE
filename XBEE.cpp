@@ -180,12 +180,12 @@ void XBEE::displayNeighbours(){
 bool XBEE::setLocalXbeeAddress(uint32_t timeout_millis){
 
 	//set time out time
-	printf("millis: %d\r\n", *this->millis);
+	printf("-millis: %d\r\n", *this->millis);
 	uint32_t start_millis = *this->millis;
 
 	//get msb bytes.
 
-	if (! sendAtCommandAndAwaitWithResponse(AT_MAC_HEIGH_SH , timeout_millis) ){
+	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_HEIGH_SH , timeout_millis) ){
 		return false;
 	}
 
@@ -198,7 +198,7 @@ bool XBEE::setLocalXbeeAddress(uint32_t timeout_millis){
 		printf ("%02x ", senderXbee.address[i]);
 	}
 	printf("\r\n");
-	printf("millis: %d\r\n", *this->millis);
+	printf("--millis: %d\r\n", *this->millis);
 	return true;
 }
 
@@ -277,23 +277,27 @@ bool XBEE::sendLocalATCommand(uint16_t atCommand, bool awaitResponse){
 
 bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t timeout_millis){
 	//execute full at command with response.
-
+	//senderXbeeLockedWaitingForResponse
 	//set time out time
 	uint32_t start_millis = *this->millis;
 	if (!sendLocalATCommand( atCommand , true)){
-		printf("sending at command failed...\r\n");
+
+		printf("sending AT command failed...\r\n");
 		return false;
 	}
-
 	//check response
-	while (sendingIsLocked() && *this->millis < start_millis + timeout_millis ){
-		//sendLock is released if at response is received and processed.
+	bool timedOut = *this->millis > (start_millis + timeout_millis);
+	while (sendingIsLocked() && !timedOut) {
+		//sendLock is released if at response is received and processed. //sendingIsLocked() &&
+
 		refresh();
+		timedOut = *this->millis > (start_millis + timeout_millis);
 	}
 
 	//check if timed out
-	if (*this->millis > start_millis + timeout_millis ){
-		printf("processing or awaiting at response timed out...\r\n");
+	//if (*this->millis > start_millis + timeout_millis ){
+	if (timedOut){
+		printf("processing or awaiting at response timed out...timeout setting[ms]:%d , time it took[ms]: %d\r\n", timeout_millis, *this->millis -  start_millis  );
 		releaseSendLock(); //reset lock (knowing that we will send out a failed message...) if the response arrives anyways, it WILL be processed.
 		return false;
 	}
@@ -581,6 +585,7 @@ uint8_t XBEE::getNextIdForSendFrame(bool awaitResponse){
 void XBEE::releaseSendLock(){
 	senderXbeeLockedWaitingForResponse = false;
 	idOfFrameWaitingForResponse = 0;
+	printf("send lock released \r\n");
 }
 
 bool XBEE::sendingIsLocked(){

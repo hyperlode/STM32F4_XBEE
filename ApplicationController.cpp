@@ -61,7 +61,7 @@ void ApplicationController::executeCommand(command command){
 	{
 		printf("xbee local address\r\n");
 		printf("millis: %d\r\n", millis);
-		bool success = radio.setLocalXbeeAddress(20);
+		bool success = radio.setLocalXbeeAddress(100);
 		printf("address set(1 if success))?: %d",success);
 		break;
 	}
