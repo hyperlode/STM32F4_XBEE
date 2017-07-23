@@ -32,6 +32,7 @@ public:
 	void refresh();
 	uint8_t getCommandId();
 
+
 private:
 	char* text;
 	uint8_t id=0;
@@ -48,6 +49,8 @@ public:
 	void menuAsString(char* textHandle);
 	command getPreparedCommand();
 	bool commandWaitingToBeExecuted();
+	void prepareCommandAndLock(uint8_t commandId, int32_t intArg,char* strArg); //,
+
 	void releaseMenu();
 	//void addItem(MenuItem* item);
 	void addItem(char* text, uint8_t commandId, argument_type argumentType);
@@ -55,6 +58,7 @@ public:
 
 	bool isCharADigit(char c);
 	int8_t convertCharToDigit(char c);
+	int32_t convertStringToPositiveInt(char* input, uint16_t maxLength);
 
 
 private:
