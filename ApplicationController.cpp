@@ -21,9 +21,9 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.init();
 	mainMenu.addItem("int test", testInt , integerPositive);
 	mainMenu.addItem("string test", testStr, string);
-	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, none);
+	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, integerPositive);
 	mainMenu.addItem("xbee STATS", xbeeStats, integerPositive);
-	mainMenu.addItem("vijf item", 5, integerPositive);
+	mainMenu.addItem("xbee PROCESS", xbeeProcess, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
@@ -58,13 +58,22 @@ void ApplicationController::executeCommand(command command){
 		printf("string test with arg: %s\r\n", command.argument_str);
 		break;
 	case testXbeeGetLocalAddress:
+	{
 		printf("xbee local address\r\n");
+		printf("millis: %d\r\n", millis);
+		bool success = radio.setLocalXbeeAddress(20);
+		printf("address set(1 if success))?: %d",success);
 		break;
+	}
 	case xbeeStats:
 			radio.stats();
 			printf("xbee local address\r\n");
 			break;
-
+	case xbeeProcess:
+		{
+			radio.processReceivedFrame();
+			break;
+		}
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;
