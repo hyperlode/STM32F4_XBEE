@@ -5,14 +5,18 @@
 const uint8_t atTest[] = {0x08, 0x01, 0x53, 0x48};
 
 XBEE::XBEE(){
+	clearReceiveBuffers();
+}
+void XBEE::clearReceiveBuffers(){
 	receiveBufferCounter = 0;
 	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
 		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
 		this->receiveFrameBuffersIsLocked[i] = false;
 	}
-}
 
+}
 void XBEE::init(uint8_t UART_Number, uint32_t baud, uint32_t* millis){
+	clearReceiveBuffers();
 	this->millis = millis;
 	if (UART_Number ==1){
 		//interrupt handler.

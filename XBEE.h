@@ -170,7 +170,7 @@ public:
 	bool frameAvailableInFifoBuffer();
 	void deleteTopFrameInReceivedFifoBuffer();
 	frameReceive* getTopFrameInReceivedFifoBuffer();
-	
+	void clearReceiveBuffers();
 
 	//send frame
 	void sendPackage(char charToSend);
@@ -184,9 +184,10 @@ public:
 	bool sendingIsLocked();
 
 
-	xbeeRadio destinationXbee;
-		xbeeRadio senderXbee;
+
 private:
+	xbeeRadio destinationXbee;
+	xbeeRadio senderXbee;
 	uint32_t baud;
 
 	uint8_t receiveBufferCounter =0;

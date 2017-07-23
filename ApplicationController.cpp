@@ -21,10 +21,10 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.init();
 	mainMenu.addItem("int test", testInt , integerPositive);
 	mainMenu.addItem("string test", testStr, string);
-	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, integerPositive);
-	mainMenu.addItem("xbee STATS", xbeeStats, integerPositive);
-	mainMenu.addItem("xbee PROCESS", xbeeProcess, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, none);
+	mainMenu.addItem("xbee STATS", xbeeStats, none);
+	mainMenu.addItem("xbee PROCESS", xbeeProcess, none);
+	mainMenu.addItem("xbee CLEAR BUFFERS", xbeeClearReceiveBuffers, none);
 	mainMenu.addItem("tweede item", 2, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
@@ -44,7 +44,7 @@ void ApplicationController::refresh(){
 
 
 
-	radio.processReceivedFrame();
+	//radio.processReceivedFrame();
 
 
 }
@@ -74,6 +74,13 @@ void ApplicationController::executeCommand(command command){
 			radio.processReceivedFrame();
 			break;
 		}
+	case xbeeClearReceiveBuffers:
+			{
+				radio.clearReceiveBuffers();
+				break;
+			}
+
+
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;
