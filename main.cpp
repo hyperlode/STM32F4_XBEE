@@ -70,63 +70,13 @@ int main(void)
 	init();
 	initDiscoveryBoard();
 
-	/*
-	//init machine control
-	MachineControl machineControl;
-	machineControlPointer = &machineControl;
-	machineControl.getCharFunctionPointer = &VCP_get_char;
-	/**/
 
-	xbeePeerToPeerDemo.init(&millis);
-	pXbeePeerToPeerDemo = &xbeePeerToPeerDemo;
+	xb.init(1,9600,&millis);
+	pxb = &xb;
 
+	//xbeePeerToPeerDemo.init(&millis);
+	//pXbeePeerToPeerDemo = &xbeePeerToPeerDemo;
 
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-	//GPIO_InitTypeDef GPIO_initStructre; defined in .h file, has to be available because we work with two buttons on one pin...
-	//Analog pin configuration
-	GPIO_InitTypeDef GPIO_initStructre;
-	GPIO_initStructre.GPIO_Pin = GPIO_Pin_12 ;
-	GPIO_initStructre.GPIO_Mode = GPIO_Mode_OUT ;
-	GPIO_initStructre.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_initStructre.GPIO_OType = GPIO_OType_PP;
-	GPIO_initStructre.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_Init(GPIOD,&GPIO_initStructre);//Affecting the port with the initialization structure configuration
-
-
-	GPIO_ResetBits(GPIOD, GPIO_Pin_12);
-
-
-
-
-
-	FlagStatus flagTest;
-
-	//flagTest = SET;
-
-
-	/*
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-	GPIO_InitTypeDef GPIO_InitDef;
-	GPIO_InitDef.GPIO_Pin = GPIO_Pin_0;
-	GPIO_InitDef.GPIO_Mode = GPIO_Mode_IN ;
-
-	GPIO_InitDef.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitDef.GPIO_PuPd = GPIO_PuPd_DOWN;
-	GPIO_InitDef.GPIO_Speed = GPIO_Speed_100MHz;
-	GPIO_Init(GPIOA ,&GPIO_InitDef);
-
-
-	if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)){
-		printf("button pressed\r\n " );
-	}else{
-		//printf("button not pressed\r\n " );
-
-	}
-/**/
-
-
-
-	bool isInit = false;
 
 	millisMemory_outputToSerial = millis;
 
@@ -150,15 +100,16 @@ int main(void)
 
 
 				}else if (serialBufferPosition>0){
-					//printf("data string received: %s\r\n", serialBuffer);
-					xbeePeerToPeerDemo.serialInput(serialBuffer);
+
+					//xbeePeerToPeerDemo.serialInput(serialBuffer);
 
 
 
 					//interprete command
 					if (stringsAreEqual(serialBuffer, "lode")){
 						printf("lode command!");
-						xbeePeerToPeerDemo.executeTestCommand();
+						//xbeePeerToPeerDemo.executeTestCommand();
+						xb.stats();
 
 					}else{
 						printf("Invalid command received.\r\n"
@@ -169,12 +120,6 @@ int main(void)
 
 					serialBufferPosition =0;
 					serialBuffer[serialBufferPosition]='\0';
-
-/*
-					flagTest = USART_GetFlagStatus(USART1,USART_FLAG_RXNE);
-					printf("usartflag: %d",flagTest);
-*/
-
 
 				}
 
@@ -198,7 +143,7 @@ int main(void)
 
 
 		//check for command
-		xbeePeerToPeerDemo.refresh();
+		//xbeePeerToPeerDemo.refresh();
 
 
 
@@ -310,12 +255,11 @@ void init()
 void ColorfulRingOfDeath(void){
 	STM_EVAL_LEDOn(LED6);
 	printf("Board generated an internal error. Please restart.");
-	//while (1)
-	//{
-	//	//get stuck here forever.
+	while (1)
+	{
+		//get stuck here forever.
 
-	//}
-
+	}
 }
 
 /*
@@ -367,8 +311,9 @@ void OTG_FS_WKUP_IRQHandler(void)
 void USART1_IRQHandler()
 {
 	if (USART_GetITStatus(USART1, USART_IT_RXNE)){
-		//pRadio->receiveInterruptHandler	( USART1->DR );
-		pXbeePeerToPeerDemo->XbeeUartInterruptHandler( USART1->DR );
+		pxb->receiveInterruptHandler	( USART1->DR );
+		//pXbeePeerToPeerDemo->XbeeUartInterruptHandler( USART1->DR );
+
 		//after handling, reenable interrupts
 		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
 	}

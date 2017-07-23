@@ -11,6 +11,7 @@
 
 
 #include "ApplicationController.h"
+#include "XBEE.h"
 
 #ifdef __cplusplus
 	//#include "MachineControl.h"
@@ -62,9 +63,11 @@
 	uint32_t millis;
 
 
+	XBEE xb; //ddd
+	XBEE* pxb; //ddd
 
-	ApplicationController xbeePeerToPeerDemo;
-	ApplicationController* pXbeePeerToPeerDemo;
+	//ApplicationController xbeePeerToPeerDemo;
+	//ApplicationController* pXbeePeerToPeerDemo;
 
 
 	bool stringsAreEqual(char* A, char*B);
