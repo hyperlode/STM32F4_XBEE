@@ -22,7 +22,7 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("int test", testInt , integerPositive);
 	mainMenu.addItem("string test", testStr, string);
 	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, none);
-	mainMenu.addItem("vier item", 4, integerPositive);
+	mainMenu.addItem("xbee STATS", xbeeStats, integerPositive);
 	mainMenu.addItem("vijf item", 5, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
 	mainMenu.addItem("tweede item", 2, integerPositive);
@@ -60,6 +60,11 @@ void ApplicationController::executeCommand(command command){
 	case testXbeeGetLocalAddress:
 		printf("xbee local address\r\n");
 		break;
+	case xbeeStats:
+			radio.stats();
+			printf("xbee local address\r\n");
+			break;
+
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;

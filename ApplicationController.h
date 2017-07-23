@@ -7,7 +7,7 @@
 #include "Menu.h"
 #include "XBEE.h"
 
-enum commandIds {testInt, testStr,testXbeeGetLocalAddress};
+enum commandIds {testInt, testStr,testXbeeGetLocalAddress,xbeeProcess, xbeeStats, xbeeClearReceiveBuffers};
 
 
 
