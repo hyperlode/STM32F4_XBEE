@@ -247,6 +247,36 @@ void XBEE::processTransmitStatus(){
 
 }
 
+void XBEE::processModemStatus(frameReceive* frame){
+
+	printf(	"modes status: ");
+	switch(frame->frame[FRAME_FRAMEDATA_STARTINDEX+1]){
+		case 0x02:
+			printf(	"device associated");
+			break;
+
+		case 0x03:
+			printf(	"device disassociated");
+			break;
+
+		default:
+			printf(	"code: %02x",frame->frame[FRAME_FRAMEDATA_STARTINDEX+1]);
+			break;
+
+	}
+	printf(	"\r\n");
+
+	/*
+	for (uint8_t i = 0; i< frame->lengthFrameData; i++){
+		//printf("char: %c\r\n", frame->frame[FRAME_FRAMEDATA_STARTINDEX + i]);
+
+		 //, package->lengthFrameData
+
+	}
+	*/
+
+}
+
 //---------------
 //AT Command mode
 //void XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* payload ){
@@ -657,8 +687,10 @@ void XBEE::processReceivedFrame(){
 	}else if( frameType == XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE){
 		if (atResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
 			processAtResponse();
-			printf("at response");
+			printf("At response received. \r\n");
 		}
+	}else if( frameType == XBEE_FRAME_TYPE_MODEM_STATUS){
+			processModemStatus(fifoTopFrame);
 	}else{
 		printf("frame is not a response %d, %d, %d \r\n", atResponse.id ,idOfFrameWaitingForResponse,senderXbeeLockedWaitingForResponse);
 	}
@@ -712,7 +744,7 @@ uint8_t XBEE::parseFrame (frameReceive* frame){
 	uint8_t frameType = frame->frame[FRAME_FRAMEDATA_STARTINDEX];
 
 	//AT response parsing
-	if (frameType == 0x88){
+	if (frameType == XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE){
 		printf("AT response frame.\r\n");
 		atResponse.id = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
 		atResponse.atCommand = frame->frame[FRAME_FRAMEDATA_STARTINDEX + 2] <<8 | frame->frame[FRAME_FRAMEDATA_STARTINDEX + 3];
@@ -723,7 +755,7 @@ uint8_t XBEE::parseFrame (frameReceive* frame){
 		}
 		displayAtCommandResponseFrameData(&atResponse);
 
-	}else if (frameType == 0x8B){
+	}else if (frameType == XBEE_FRAME_TYPE_TRANSMIT_STATUS){
 		//transmit status
 		transmitResponse.id =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
 		transmitResponse.status =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 5];
@@ -863,13 +895,11 @@ void XBEE::receiveFrame(char receivedByte){
 
 				if (this->receiveBufferCounter >= NUMBER_OF_RECEIVEBUFFERS){
 					this->receiveBufferCounter = 0;
-					//printf("%d\r\n" ,this->receiveBufferCounter );
 				}
 
-				//printf("%d\r\n" ,this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] );
 				//check if next buffer is free
 				if (this->receiveFrameBuffersIsLocked[this->receiveBufferCounter] ){
-					printf("unprocessed overflow WARNING: all package buffers full, wait with sending... \r\n "); //todo
+					printf("WARNING: Now all package buffers are full, no room for the next package ... \r\n "); //todo
 				}
 			}
 		}

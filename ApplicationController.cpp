@@ -10,7 +10,7 @@ void ApplicationController::init(uint32_t* millis){
 	//init radio
 
 	pRadio = &radio;
-	radio.init(1,9600,millis);
+	radio.init(1,9600,millis); //https://www.digi.com/support/forum/51792/how-to-change-the-xbee-serial-baud-rate  (if you ever have to be able to reset the baud rate...)
 
 
 	//for (uint8_t i = 0; i<8;i++){
@@ -36,15 +36,15 @@ void ApplicationController::init(uint32_t* millis){
 
 void ApplicationController::refresh(){
 	if (mainMenu.commandWaitingToBeExecuted()){
-		command hoitjes;
-		hoitjes = mainMenu.getPreparedCommand();
-		executeCommand(hoitjes);
+		command cmd;
+		cmd = mainMenu.getPreparedCommand();
+		executeCommand(cmd);
 		mainMenu.releaseMenu();
 	}
 
 
-
-	//radio.processReceivedFrame();
+	//auto processing:
+	radio.processReceivedFrame();
 
 
 }

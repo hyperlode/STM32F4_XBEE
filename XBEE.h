@@ -43,7 +43,7 @@
 #define XBEE_FRAME_TYPE_AT_COMMAND 0x08
 #define XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE 0x88
 #define XBEE_FRAME_TYPE_TRANSMIT_REQUEST 0x10
-
+#define XBEE_FRAME_TYPE_MODEM_STATUS 0x8A
 #define XBEE_FRAME_TYPE_TRANSMIT_STATUS 0x8B
 
 /*
@@ -99,12 +99,13 @@ struct atFrameData{
 };
 
 struct frameReceive{
+	//complete api frame
 	//frameData data;
 	uint32_t frameRecordIndex = 0;
 	bool frameBusyReceiving = false;
 	char frame[RECEIVE_BUFFER_SIZE+1];
 	uint16_t lengthFrameData = 0; //
-	uint16_t length = 4; //minumum four chars long.
+	uint16_t length = 4; //minimum four chars long (because this is a complete frame)
 };
 
 struct frame{
@@ -146,6 +147,10 @@ public:
 	void setDestinationAddress();
 	uint8_t getNextIdForSendFrame(bool awaitResponse);
 
+
+
+	//modem status
+	void processModemStatus(frameReceive* frame);
 
 	//transmit request
 	void processTransmitStatus();
