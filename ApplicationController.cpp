@@ -25,11 +25,13 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("xbee STATS", xbeeStats, none);
 	mainMenu.addItem("xbee PROCESS", xbeeProcess, none);
 	mainMenu.addItem("xbee CLEAR BUFFERS", xbeeClearReceiveBuffers, none);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
-	mainMenu.addItem("tweede item", 2, integerPositive);
+	mainMenu.addItem("xbee show NEIGHBOURS", xbeeGetRemotes, none);
+	mainMenu.addItem("xbee AT custom", xbeeCustomAtCommand, string);
+	mainMenu.addItem("xbee RESET", xbeeReset, none);
+	mainMenu.addItem("xbee set DESTINATION", xbeeSetDestination, integerPositive);
+	mainMenu.addItem("xbee get DESTINATION", xbeeGetRemoteAddress, none);
+
+	mainMenu.addItem("test", testCmd, none);
 
 
 }
@@ -61,24 +63,50 @@ void ApplicationController::executeCommand(command command){
 	{
 		printf("xbee local address\r\n");
 		printf("millis: %d\r\n", millis);
-		bool success = radio.setLocalXbeeAddress(100);
+		bool success = radio.getLocalXbeeAddress(100);
 		printf("address set(1 if success))?: %d",success);
 		break;
 	}
+	case xbeeGetRemoteAddress:
+		radio.getDestinationFromXbee();
+		break;
 	case xbeeStats:
-			radio.stats();
-			printf("xbee local address\r\n");
-			break;
+		radio.stats();
+		printf("xbee local address\r\n");
+		break;
 	case xbeeProcess:
 		{
 			radio.processReceivedFrame();
 			break;
 		}
+
+	case xbeeGetRemotes:
+			{
+				radio.searchActiveRemoteXbees(10000);
+				radio.displayNeighbours();
+				break;
+			}
+
+	case xbeeCustomAtCommand:
+	{
+			uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
+
+			radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
+	}
 	case xbeeClearReceiveBuffers:
 			{
 				radio.clearReceiveBuffers();
 				break;
 			}
+	case xbeeReset:
+		radio.reset();
+		break;
+	case xbeeSetDestination:
+		radio.setNeighbourAsRemote(command.argument_int);
+		break;
+	case testCmd:
+		radio.displayNeighbours();
+		break;
 
 
 	default:

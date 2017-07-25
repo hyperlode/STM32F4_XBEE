@@ -22,14 +22,18 @@
 #define AT_DATA_SIZE 100
 #define AT_FRAME_DATA_STARTINDEX 5
 
+#define AT_COMMAND_TIMEOUT_GET_SETTING 100
+
 //https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#containers/cont_at_cmd_addressing.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520commands%7C_____0
 #define AT_MAC_HEIGH_SH 0x5348
 #define AT_MAC_LOW_SL 0x534C
 #define AT_MAC_DESTINATION_HIGH_DH 0x4448
 #define AT_MAC_DESTINATION_LOW_DL 0x444C
 #define AT_DISCOVER_NODES_ND 0x4E44    //searches nodes in the entire network. great for discovering radios //https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_nd.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____3
-#define AT_FIND_NEIGHBOURS_FN 0x464E    //same like ND but only one hop away! https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_fn.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____4
+#define AT_FIND_NEIGHBOURS_FN 0x464E    //(doesnt seem to work for S2C) same like ND but only one hop away! https://www.digi.com/resources/documentation/digidocs/90002173/Default.htm#reference/r_cmd_fn.htm%3FTocPath%3DAT%2520commands%7CAddressing%2520discovery%252Fconfiguration%2520commands%7C_____4
 #define AT_AVAILABLE_FREQUENCIES_AF 0x4146
+#define AT_APPLY_CHANGES_AC 0x4143
+#define AT_WRITE_WR 0x5752
 
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
 #define API_MODE 2 //ASSUME API2 is used (escape functionality built in). No other mode available.
@@ -130,6 +134,7 @@ public:
 	//administration
 	void init(uint8_t UART_Number, uint32_t baud, uint32_t* millis);
 	void refresh();
+	void reset();
 	void stats();
 	void displayFrame(frame* frame);
 
@@ -140,14 +145,14 @@ public:
 
 
 
-	bool setLocalXbeeAddress(uint32_t timeout_millis);
+	bool getLocalXbeeAddress(uint32_t timeout_millis);
+	bool getDestinationFromXbee();
+
 	bool searchActiveRemoteXbees(uint32_t timeout_millis);
 	void displayNeighbours();
-
-	void setDestinationAddress();
+	bool setNeighbourAsRemote(uint8_t numberInList);
+	void clearNeighbours();
 	uint8_t getNextIdForSendFrame(bool awaitResponse);
-
-
 
 	//modem status
 	void processModemStatus(frameReceive* frame);
@@ -157,8 +162,10 @@ public:
 	void sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse);
 
 	//AT
-	bool sendLocalATCommand(uint16_t atCommand, bool awaitResponse);
+
+	bool sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, uint32_t timeout_millis);
 	bool sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t timeout_millis);
+
 	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
 	void processAtResponse();
 	void displayAtCommandResponseFrameData(atCommandResponseFrameData* atFrame);
@@ -191,6 +198,9 @@ public:
 
 
 private:
+
+	bool sendLocalATCommand(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, bool awaitResponse); //only make time out version public
+
 	xbeeRadio destinationXbee;
 	xbeeRadio senderXbee;
 	uint32_t baud;
