@@ -141,10 +141,7 @@ public:
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);
 
-
-
-
-
+	bool sendMessageToDestination(char* message, uint16_t messageLength, uint32_t timeout_millis);
 	bool getLocalXbeeAddress(uint32_t timeout_millis);
 	bool getDestinationFromXbee();
 
@@ -159,7 +156,7 @@ public:
 
 	//transmit request
 	void processTransmitStatus();
-	void sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse);
+
 
 	//AT
 

@@ -56,6 +56,8 @@ public:
 	void addItem(char* text, uint8_t commandId, argument_type argumentType);
 	void userInput(char* input);
 
+	uint8_t getMenuLineNumberOfCommand(command cmd);
+
 	bool isCharADigit(char c);
 	int8_t convertCharToDigit(char c);
 	int32_t convertStringToPositiveInt(char* input, uint16_t maxLength);

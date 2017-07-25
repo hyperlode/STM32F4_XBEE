@@ -165,34 +165,24 @@ void XBEE::clearNeighbours(){
 bool XBEE::setNeighbourAsRemote(uint8_t numberInList){
 	if (neighbours[numberInList].isValid){
 		destinationXbee = neighbours[numberInList];
-		printf("millis at start: %d\r\n", *this->millis);
+		//printf("millis at start: %d\r\n", *this->millis);
 	}else{
 		printf("invalid neighbour\r\n");
+		return false;
 	}
-
-	//uint8_t* dl [4];
-	//for (uint8_t i = 0;i<4;i++){
-	//	;
-	//}
-	//destination address
-		for (uint8_t i=0;i<8;i++){
-			printf(" %02x",destinationXbee.address[i]);
-		}
 
 	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_HIGH_DH, &destinationXbee.address[0], 4, 500 )){
 		return false;
 	}
-
 	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_LOW_DL, &destinationXbee.address[4], 4, 500 )){
-			return false;
-		}
+		return false;
+	}
 	if (!sendAtCommandAndAwaitWithResponse(AT_WRITE_WR,  500 )){
-			return false;
-		}
+		return false;
+	}
 	if (!sendAtCommandAndAwaitWithResponse(AT_APPLY_CHANGES_AC,  500 )){
 		return false;
 	}
-
 
 	printf("SET!\r\n");
 
@@ -249,6 +239,7 @@ void XBEE::displayNeighbours(){
 */
 
 
+
 bool XBEE::getLocalXbeeAddress(uint32_t timeout_millis){
 
 	//set time out time
@@ -275,6 +266,11 @@ bool XBEE::getLocalXbeeAddress(uint32_t timeout_millis){
 }
 
 bool XBEE::getDestinationFromXbee(){
+	printf("destination xbee address will be set (now): ");
+	for (uint8_t i=0 ; i<8 ; i++){
+		printf ("%02x ", destinationXbee.address[i]);
+	}
+	printf("\r\n");
 
 	//get msb bytes.
 
@@ -285,6 +281,7 @@ bool XBEE::getDestinationFromXbee(){
 	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_LOW_DL, AT_COMMAND_TIMEOUT_GET_SETTING) ){
 		return false;
 	}
+	destinationXbee.isValid = true;
 
 	printf("destination xbee address set: ");
 	for (uint8_t i=0 ; i<8 ; i++){
@@ -299,29 +296,44 @@ bool XBEE::getDestinationFromXbee(){
 
 //send data to destination xbee
 
-void XBEE::sendMessageToDestination(uint8_t* message, uint16_t messageLength, bool awaitResponse){
+bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, uint32_t timeout_millis){
+
+
+	if (!destinationXbee.isValid){
+		printf("error: remote not set!");
+		return false;
+	}
+	uint32_t start_millis = *this->millis;
+
 	//frame type: 0X10 transmit request
 	frameData frameData;
 	frameData.length = 14 + messageLength;
 
 	frameData.data[0] = 0x10; //frame type = Transmit request
-	frameData.data[1] = getNextIdForSendFrame(awaitResponse);
+	frameData.data[1] = getNextIdForSendFrame(true);
 
 	//destination address
 	for (uint8_t i=0;i<8;i++){
 		frameData.data[2 + i] = destinationXbee.address[i];
 	}
+
 	frameData.data[10] = 0xFF; // 16 bit dest address.
 	frameData.data[11] = 0xFE;
 
 	frameData.data[12] = 0x00; //broadcast radius
 	frameData.data[13] = 0x00; //options
 
-	//copy in the message.
+	//copy the message.
 	for (uint16_t i = 0;i<messageLength; i++){
 		frameData.data[14 + i] = message[i];
 	}
-	buildAndSendFrame(&frameData);
+
+	//send the frame
+	if (!buildAndSendFrame(&frameData)){
+		printf("message sending failed. \r\n");
+		return false;
+	}
+
 }
 
 void XBEE::processTransmitStatus(){
@@ -331,7 +343,6 @@ void XBEE::processTransmitStatus(){
 		printf("transmit status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
 	}
 	releaseSendLock();
-
 }
 
 void XBEE::processModemStatus(frameReceive* frame){
@@ -501,6 +512,21 @@ void XBEE::processAtResponse(){
 
 	//response actions
 	switch (atResponse.atCommand){
+		case AT_MAC_DESTINATION_HIGH_DH:
+			for (uint8_t i =0;i<4;i++){
+				destinationXbee.address[i] = atResponse.responseData[i];
+			}
+			releaseSendLock();
+			break;
+
+		case AT_MAC_DESTINATION_LOW_DL:
+			for (uint8_t i =0;i<4;i++){
+				destinationXbee.address[i+4] = atResponse.responseData[i];
+			}
+			releaseSendLock();
+			break;
+
+
 		case AT_MAC_HEIGH_SH:
 			for (uint8_t i =0;i<4;i++){
 				senderXbee.address[i] = atResponse.responseData[i];

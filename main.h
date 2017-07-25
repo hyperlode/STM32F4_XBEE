@@ -50,7 +50,7 @@
 	static uint16_t adcNumberOfSampleCycles= 0;
 
 	//char* buffer;
-	#define SERIAL_BUFFER_SIZE 10
+	#define SERIAL_BUFFER_SIZE 64
 	char serialBuffer[SERIAL_BUFFER_SIZE+1];
 	uint8_t serialBufferPosition = 0;
 	bool serialBufferOverflow = false;

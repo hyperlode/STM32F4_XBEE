@@ -130,6 +130,16 @@ void Menu::prepareCommandAndLock(uint8_t commandId, int32_t intArg, char* strArg
 	//printf("debug: str arg: \"%s\"\r\n",chosenCommand.argument_str);
 }
 
+uint8_t Menu::getMenuLineNumberOfCommand(command cmd){
+
+	uint8_t i = 0;
+	while (cmd.id != items[i].getCommandId() && i <NUMBER_OF_ITEMS_MAX){
+		i++;
+	}
+	return i;
+
+}
+
 
 void Menu::userInput(char* input){
 	if(commandSelectedAndWaitingForRelease){
@@ -195,21 +205,20 @@ void Menu::userInput(char* input){
 		case string:
 		{
 			int16_t j = 0;
-			while( !(input[j] == '\0') && j< COMMAND_ARGUMENT_STRING_MAX_SIZE-1  ){
+			while( !(input[j] == '\0') && j< COMMAND_ARGUMENT_STRING_MAX_SIZE-1){
 				argumentString[j] = input[j];
 				j++;
 			}
 			argumentString[++j] = '\0'; //terminate string
 
 			if(j>= COMMAND_ARGUMENT_STRING_MAX_SIZE){
-				printf("string too long, max %d chars", COMMAND_ARGUMENT_STRING_MAX_SIZE);
-			}else{
+				printf("ERROR: string too long, truncated at %d chars.\r\n", COMMAND_ARGUMENT_STRING_MAX_SIZE);
 
-				//chosenCommand.argument_str  = argumentString;
-				//printf("str accepted: \"%s\"\r\n",chosenCommand.argument_str);
-				waitingForArgument = false;
-				prepareCommandAndLock(this->items[chosenItemWaitingForArgument].getCommandId(),-1,argumentString)  ;
 			}
+
+			waitingForArgument = false;
+			prepareCommandAndLock(this->items[chosenItemWaitingForArgument].getCommandId(),-1,argumentString)  ;
+
 			break;
 		}
 		default:

@@ -18,7 +18,8 @@ enum commandIds {testInt,
 	xbeeCustomAtCommand,
 	xbeeReset,
 	xbeeSetDestination,
-	xbeeGetRemoteAddress
+	xbeeGetRemoteAddress,
+	xbeeSendMessageToRemote
 
 };
 

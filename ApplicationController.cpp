@@ -30,6 +30,7 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("xbee RESET", xbeeReset, none);
 	mainMenu.addItem("xbee set DESTINATION", xbeeSetDestination, integerPositive);
 	mainMenu.addItem("xbee get DESTINATION", xbeeGetRemoteAddress, none);
+	mainMenu.addItem("xbee send MESSAGE to destination", xbeeSendMessageToRemote, string);
 
 	mainMenu.addItem("test", testCmd, none);
 
@@ -94,10 +95,19 @@ void ApplicationController::executeCommand(command command){
 			radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
 	}
 	case xbeeClearReceiveBuffers:
-			{
-				radio.clearReceiveBuffers();
-				break;
-			}
+	{
+		radio.clearReceiveBuffers();
+		break;
+	}
+	case xbeeSendMessageToRemote:
+	{
+		uint16_t length = 0;
+		while (command.argument_str[length]!= '\0' && length < COMMAND_ARGUMENT_STRING_MAX_SIZE){
+			length++;
+		}
+		radio.sendMessageToDestination(command.argument_str,length,200);
+		break;
+	}
 	case xbeeReset:
 		radio.reset();
 		break;
@@ -105,7 +115,8 @@ void ApplicationController::executeCommand(command command){
 		radio.setNeighbourAsRemote(command.argument_int);
 		break;
 	case testCmd:
-		radio.displayNeighbours();
+		//radio.displayNeighbours();
+
 		break;
 
 
@@ -113,8 +124,7 @@ void ApplicationController::executeCommand(command command){
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;
 	}
-
-	printf("command executed: %d \r\n", command.id);
+	printf("Command executed: %d \r\n", mainMenu.getMenuLineNumberOfCommand(command));
 
 
 }
