@@ -26,7 +26,8 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("xbee PROCESS", xbeeProcess, none);
 	mainMenu.addItem("xbee CLEAR BUFFERS", xbeeClearReceiveBuffers, none);
 	mainMenu.addItem("xbee show NEIGHBOURS", xbeeGetRemotes, none);
-	mainMenu.addItem("xbee AT custom", xbeeCustomAtCommand, string);
+	mainMenu.addItem("xbee AT + string arg (i.e. NI or NIname)", xbeeCustomAtCommand, string);
+	mainMenu.addItem("xbee AT + int arg (i.e. SM or SM1)", xbeeCustomAtCommandConvertArgToInt, string);
 	mainMenu.addItem("xbee RESET", xbeeReset, none);
 	mainMenu.addItem("xbee set DESTINATION", xbeeSetDestination, integerPositive);
 	mainMenu.addItem("xbee get DESTINATION", xbeeGetRemoteAddress, none);
@@ -69,7 +70,7 @@ void ApplicationController::executeCommand(command command){
 		break;
 	}
 	case xbeeGetRemoteAddress:
-		radio.getDestinationFromXbee();
+		radio.getDestinationAddressFromXbee();
 		break;
 	case xbeeStats:
 		radio.stats();
@@ -87,13 +88,80 @@ void ApplicationController::executeCommand(command command){
 				radio.displayNeighbours();
 				break;
 			}
+	case xbeeCustomAtCommandConvertArgToInt:
+	{
+/*
+		printf("tmp:\r\n");
+		for (uint8_t i = 0; i<10;i++){
+			printf(".%02x\r\n",command.argument_str[i]);
+		}
+*/
+
+		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
+
+		if (len<3){
+			printf("user error: AT command is minimum two letters.\r\n");
+			break;
+		}
+		uint32_t argInt = mainMenu.convertStringToPositiveInt(&command.argument_str[2], len);
+
+
+//		printf("number: %08x",argInt);
+
+		if (argInt == -1){
+			printf("number invalid.: %08x",argInt);
+			//return false;
+
+		}else{
+	//		printf("number valid.: %08x",argInt);
+
+
+			uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
+			if (len==3){
+			//	printf("WITHOUT arg");
+				radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
+			}else{
+			//	printf("WITH arg");
+				radio.sendAtCommandAndAwaitWithResponse(atCmd,argInt,1000);
+
+			}
+		}
+		break;
+
+	}
 
 	case xbeeCustomAtCommand:
 	{
-			uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
+		//first two chars are the command, the rest is argument.
+/*
+		printf("tmp:\r\n");
+		for (uint8_t i = 0; i<10;i++){
+			printf(".%02x",command.argument_str[i]);
+		}
+*/
 
+		uint16_t l = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
+
+		if (l<3){
+			printf("user error: AT command is minimum two letters.\r\n");
+			break;
+		}
+		uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
+		if (l==3){
+			printf("WITHOUT arg");
 			radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
+		}else{
+			printf("WITH arg");
+			radio.sendAtCommandAndAwaitWithResponse(atCmd, (uint8_t*)(&command.argument_str[2]), l-2, 1000);
+		}
+
+
+
+
 	}
+
+
+
 	case xbeeClearReceiveBuffers:
 	{
 		radio.clearReceiveBuffers();
@@ -101,11 +169,8 @@ void ApplicationController::executeCommand(command command){
 	}
 	case xbeeSendMessageToRemote:
 	{
-		uint16_t length = 0;
-		while (command.argument_str[length]!= '\0' && length < COMMAND_ARGUMENT_STRING_MAX_SIZE){
-			length++;
-		}
-		radio.sendMessageToDestination(command.argument_str,length,200);
+		uint16_t l = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE);
+		radio.sendMessageToDestination(command.argument_str,l,200);
 		break;
 	}
 	case xbeeReset:
@@ -128,8 +193,11 @@ void ApplicationController::executeCommand(command command){
 
 
 }
+/*
+bool executeAtCommand(){
 
-
+}
+*/
 
 void ApplicationController::XbeeUartInterruptHandler(char c){
 	radio.receiveInterruptHandler(c);
@@ -152,3 +220,16 @@ bool ApplicationController::isBusy(){
 	return isLocked;
 }
 
+uint16_t ApplicationController::lengthOfString(char* string, uint16_t maxLength){
+	// 0x00 equal '\0' , and is included in the char array itself.   lode\0   length=5.
+	uint16_t length = 0;
+	while (string[length]!= '\0' && length < maxLength-1){
+		length++;
+	}
+	length++;
+	if (length >= maxLength){
+		printf("ASSERT ERROR: string not terminated or longer than allowed.");
+	}
+	return length;
+
+}

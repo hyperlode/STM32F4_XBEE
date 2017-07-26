@@ -177,15 +177,22 @@ bool XBEE::setNeighbourAsRemote(uint8_t numberInList){
 	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_LOW_DL, &destinationXbee.address[4], 4, 500 )){
 		return false;
 	}
+	if (!saveChangesinLocalXbee())return false;
+
+	printf("Remote set.\r\n");
+
+	return true;
+}
+
+
+bool XBEE::saveChangesinLocalXbee(){
+	//by peeking at XCTU, at WR and and AC are written to store settings to non volatile memory.
 	if (!sendAtCommandAndAwaitWithResponse(AT_WRITE_WR,  500 )){
 		return false;
 	}
 	if (!sendAtCommandAndAwaitWithResponse(AT_APPLY_CHANGES_AC,  500 )){
 		return false;
 	}
-
-	printf("SET!\r\n");
-
 	return true;
 }
 
@@ -217,29 +224,6 @@ void XBEE::displayNeighbours(){
 	}
 }
 
-//void XBEE::sendTextToDestination(char* message){
-
-
-//}
-/*
-void XBEE::displayNeighbours(){
-
-	for (uint8_t i = 0; i< this->numberOfNeighbours;i++){
-		printf ("  %d:", i);
-		for (uint8_t j = 0; j< 8;j++){
-			printf ("%d",this->neighbours[i].address[j]);
-		}
-		for (uint8_t j = 0; j< XBEE_NAME_MAX_NUMBER_OF_CHARACTERS;j++){
-			printf ("%c",this->neighbours[i].name[j]);
-		}
-
-	}
-}
-
-*/
-
-
-
 bool XBEE::getLocalXbeeAddress(uint32_t timeout_millis){
 
 	//set time out time
@@ -265,7 +249,7 @@ bool XBEE::getLocalXbeeAddress(uint32_t timeout_millis){
 	return true;
 }
 
-bool XBEE::getDestinationFromXbee(){
+bool XBEE::getDestinationAddressFromXbee(){
 	printf("destination xbee address will be set (now): ");
 	for (uint8_t i=0 ; i<8 ; i++){
 		printf ("%02x ", destinationXbee.address[i]);
@@ -350,15 +334,15 @@ void XBEE::processModemStatus(frameReceive* frame){
 	printf(	"modes status: ");
 	switch(frame->frame[FRAME_FRAMEDATA_STARTINDEX+1]){
 		case 0x02:
-			printf(	"device associated");
+			printf(	"device associated\r\n");
 			break;
 
 		case 0x03:
-			printf(	"device disassociated");
+			printf(	"device disassociated\r\n");
 			break;
 
 		default:
-			printf(	"code: %02x",frame->frame[FRAME_FRAMEDATA_STARTINDEX+1]);
+			printf(	"code: %02x\r\n",frame->frame[ FRAME_FRAMEDATA_STARTINDEX + 1]);
 			break;
 
 	}
@@ -420,6 +404,29 @@ bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t timeou
 	uint8_t* dummy;
 	sendAtCommandAndAwaitWithResponse(atCommand, dummy,0, timeout_millis );
 
+}
+
+bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t parameterInt,  uint32_t timeout_millis){
+	//convert int to byte array (for parameter).
+	//printf("parameter %d\r\n",parameterInt);
+	uint8_t parameter [AT_DATA_SIZE];
+
+	uint8_t bitFieldByteLength = 66;
+
+	for (uint8_t i = 0;i<4;i++){
+		parameter[i] = (uint8_t)(parameterInt>>(8*(3-i)));//parameter[i] = (uint8_t)parameterInt>>(8*(4-i));
+		if (bitFieldByteLength == 66 && parameter[i] !=0){
+			bitFieldByteLength = (4-i);
+		//	printf("not zero!");
+		}
+	//	printf("ahoi %02x \r\n", parameter[i]);
+	}
+
+//	printf("bif ield length: %d",bitFieldByteLength);
+//	printf("bif ield length: %d",parameter[3]);
+//	printf("bif ield length: %d",parameter[2]);
+
+	XBEE::sendAtCommandAndAwaitWithResponse(atCommand, &parameter[4-bitFieldByteLength], bitFieldByteLength, timeout_millis );
 }
 
 bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, uint32_t timeout_millis ){
@@ -500,12 +507,12 @@ bool XBEE::atCommandSuccessfullyExecuted(){
 void XBEE::processAtResponse(){
 
 	//response status
-	printf("At response received (at %dms) %04x:",*this->millis,atResponse.atCommand);
+	printf("At response received (at %dms) %02x:",*this->millis,atResponse.atCommand);
 	if (!atResponse.status){
 		printf("success.\r\n");
 
 	}else{
-		printf("failed.(code: %d)\r\n", atResponse.atCommand, atResponse.status);
+		printf("failed.(code: %d)\r\n", atResponse.status);
 		return;
 	//printf("-->response to neighbourfinding (id:%d)",idOfFrameWaitingForResponse);
 	}

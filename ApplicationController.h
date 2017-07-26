@@ -16,6 +16,7 @@ enum commandIds {testInt,
 	xbeeGetRemotes,
 	testCmd,
 	xbeeCustomAtCommand,
+	xbeeCustomAtCommandConvertArgToInt,
 	xbeeReset,
 	xbeeSetDestination,
 	xbeeGetRemoteAddress,
@@ -41,6 +42,9 @@ public:
 	void executeCommand(command command);
 
 	void XbeeUartInterruptHandler(char c);
+
+	uint16_t lengthOfString(char* string, uint16_t maxLength);
+
 private:
 
 	bool isLocked = false;

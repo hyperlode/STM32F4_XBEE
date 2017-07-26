@@ -143,8 +143,8 @@ public:
 
 	bool sendMessageToDestination(char* message, uint16_t messageLength, uint32_t timeout_millis);
 	bool getLocalXbeeAddress(uint32_t timeout_millis);
-	bool getDestinationFromXbee();
-
+	bool getDestinationAddressFromXbee();
+	bool saveChangesinLocalXbee();
 	bool searchActiveRemoteXbees(uint32_t timeout_millis);
 	void displayNeighbours();
 	bool setNeighbourAsRemote(uint8_t numberInList);
@@ -161,6 +161,7 @@ public:
 	//AT
 
 	bool sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, uint32_t timeout_millis);
+	bool sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t parameterInt, uint32_t timeout_millis);
 	bool sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t timeout_millis);
 
 	void atFrameDataToFrameData(atFrameData* atData, frameData* frameData);
