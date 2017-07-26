@@ -122,7 +122,9 @@ void ApplicationController::executeCommand(command command){
 				radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
 			}else{
 			//	printf("WITH arg");
-				radio.sendAtCommandAndAwaitWithResponse(atCmd,argInt,1000);
+				if (radio.sendAtCommandAndAwaitWithResponse(atCmd,argInt,1000)){
+					radio.saveChangesinLocalXbee();
+				}
 
 			}
 		}
@@ -138,29 +140,25 @@ void ApplicationController::executeCommand(command command){
 		for (uint8_t i = 0; i<10;i++){
 			printf(".%02x",command.argument_str[i]);
 		}
-*/
+/**/
 
-		uint16_t l = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
+		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
 
-		if (l<3){
+		if (len<3){
 			printf("user error: AT command is minimum two letters.\r\n");
 			break;
 		}
 		uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
-		if (l==3){
-			printf("WITHOUT arg");
+		if (len==3){
+			//printf("WITHOUT arg");
 			radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
 		}else{
-			printf("WITH arg");
-			radio.sendAtCommandAndAwaitWithResponse(atCmd, (uint8_t*)(&command.argument_str[2]), l-2, 1000);
+			//printf("WITH arg");
+			if (radio.sendAtCommandAndAwaitWithResponse(atCmd, (uint8_t*)(&command.argument_str[2]), len-3, 1000)){ //len-3 because '/0' will not be part of the sent parameter.
+				radio.saveChangesinLocalXbee();
+			}
 		}
-
-
-
-
 	}
-
-
 
 	case xbeeClearReceiveBuffers:
 	{

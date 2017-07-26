@@ -7,6 +7,9 @@
 #include "misc.h"
 #include <stdio.h>
 
+#define XBEE_PRINTF_DEBUG
+#define XBEE_PRINTF_INFO
+
 #define RECEIVE_BUFFER_SIZE 100
 #define NUMBER_OF_SENDBUFFERS 3
 #define SEND_BUFFER_SIZE RECEIVE_BUFFER_SIZE

@@ -209,7 +209,8 @@ void Menu::userInput(char* input){
 				argumentString[j] = input[j];
 				j++;
 			}
-			argumentString[++j] = '\0'; //terminate string
+
+			argumentString[j] = '\0'; //terminate output string like input.
 
 			if(j>= COMMAND_ARGUMENT_STRING_MAX_SIZE){
 				printf("ERROR: string too long, truncated at %d chars.\r\n", COMMAND_ARGUMENT_STRING_MAX_SIZE);
