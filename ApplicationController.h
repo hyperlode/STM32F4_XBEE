@@ -14,14 +14,13 @@ enum commandIds {testInt,
 	xbeeStats,
 	xbeeClearReceiveBuffers,
 	xbeeGetRemotes,
-	testCmd,
+	sendCyclicMessage,
 	xbeeCustomAtCommand,
 	xbeeCustomAtCommandConvertArgToInt,
 	xbeeReset,
 	xbeeSetDestination,
 	xbeeGetRemoteAddress,
 	xbeeSendMessageToRemote
-
 };
 
 
@@ -46,7 +45,9 @@ public:
 	uint16_t lengthOfString(char* string, uint16_t maxLength);
 
 private:
-
+	bool cyclicMessageEnabled = false;
+	uint32_t cyclicMessagePeriod_ms = 0;
+	uint32_t lastSentCyclicMessage_ms = 0;
 	bool isLocked = false;
 	char menuString [MENU_SCREEN_TEXT_MAX];
 	Menu mainMenu;

@@ -7,8 +7,9 @@
 #include "misc.h"
 #include <stdio.h>
 
-#define XBEE_PRINTF_DEBUG
-#define XBEE_PRINTF_INFO
+//#define XBEE_PRINTF_DEBUG
+//#define XBEE_PRINTF_INFO
+//#define XBEE_PRINTF_MINIMAL_INFO
 
 #define RECEIVE_BUFFER_SIZE 100
 #define NUMBER_OF_SENDBUFFERS 3
@@ -143,6 +144,8 @@ public:
 
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);
+	bool sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis);
+	bool sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis);
 
 	bool sendMessageToDestination(char* message, uint16_t messageLength, uint32_t timeout_millis);
 	bool getLocalXbeeAddress(uint32_t timeout_millis);
@@ -193,6 +196,7 @@ public:
 	void sendByte(uint8_t byteToSend);
 
 	void releaseSendLock();
+	bool awaitResponseToLastMessage(uint32_t  timeout_millis);
 	bool buildAndSendFrame(frameData* frameData);
 	bool sendingIsLocked();
 

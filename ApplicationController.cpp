@@ -8,7 +8,7 @@ void ApplicationController::init(uint32_t* millis){
 
 
 	//init radio
-
+	this->millis  = millis;
 	pRadio = &radio;
 	radio.init(1,9600,millis); //https://www.digi.com/support/forum/51792/how-to-change-the-xbee-serial-baud-rate  (if you ever have to be able to reset the baud rate...)
 
@@ -33,9 +33,7 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("xbee get DESTINATION", xbeeGetRemoteAddress, none);
 	mainMenu.addItem("xbee send MESSAGE to destination", xbeeSendMessageToRemote, string);
 
-	mainMenu.addItem("test", testCmd, none);
-
-
+	mainMenu.addItem("toggle send cyclic message to destination each x ms.", sendCyclicMessage, integerPositive);
 }
 
 void ApplicationController::refresh(){
@@ -49,6 +47,13 @@ void ApplicationController::refresh(){
 
 	//auto processing:
 	radio.processReceivedFrame();
+	if (cyclicMessageEnabled && *this->millis > lastSentCyclicMessage_ms + cyclicMessagePeriod_ms){
+
+		radio.sendMessageToDestination("Heyhoo",6,false,200);
+
+		lastSentCyclicMessage_ms = *this->millis;
+
+	}
 
 
 }
@@ -96,7 +101,6 @@ void ApplicationController::executeCommand(command command){
 			printf(".%02x\r\n",command.argument_str[i]);
 		}
 */
-
 		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
 
 		if (len<3){
@@ -105,27 +109,17 @@ void ApplicationController::executeCommand(command command){
 		}
 		uint32_t argInt = mainMenu.convertStringToPositiveInt(&command.argument_str[2], len);
 
-
-//		printf("number: %08x",argInt);
-
 		if (argInt == -1){
 			printf("number invalid.: %08x",argInt);
-			//return false;
-
 		}else{
-	//		printf("number valid.: %08x",argInt);
-
 
 			uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
 			if (len==3){
-			//	printf("WITHOUT arg");
 				radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
 			}else{
-			//	printf("WITH arg");
 				if (radio.sendAtCommandAndAwaitWithResponse(atCmd,argInt,1000)){
 					radio.saveChangesinLocalXbee();
 				}
-
 			}
 		}
 		break;
@@ -167,8 +161,8 @@ void ApplicationController::executeCommand(command command){
 	}
 	case xbeeSendMessageToRemote:
 	{
-		uint16_t l = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE);
-		radio.sendMessageToDestination(command.argument_str,l,200);
+		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE);
+		radio.sendMessageToDestinationAwaitResponse(command.argument_str,len,200);
 		break;
 	}
 	case xbeeReset:
@@ -177,25 +171,23 @@ void ApplicationController::executeCommand(command command){
 	case xbeeSetDestination:
 		radio.setNeighbourAsRemote(command.argument_int);
 		break;
-	case testCmd:
+
+	case sendCyclicMessage:
+	{
 		//radio.displayNeighbours();
+		this->cyclicMessageEnabled = !this->cyclicMessageEnabled; //toggle
+		cyclicMessagePeriod_ms = command.argument_int;
 
 		break;
-
+	}
 
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;
 	}
 	printf("Command executed: %d \r\n", mainMenu.getMenuLineNumberOfCommand(command));
-
-
 }
-/*
-bool executeAtCommand(){
 
-}
-*/
 
 void ApplicationController::XbeeUartInterruptHandler(char c){
 	radio.receiveInterruptHandler(c);

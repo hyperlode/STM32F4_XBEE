@@ -11,7 +11,6 @@ void XBEE::clearReceiveBuffers(){
 	receiveBufferCounter = 0;
 	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
 		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
-		this->receiveFrameBuffersIsLocked[i] = false;
 	}
 
 }
@@ -130,6 +129,7 @@ bool XBEE::searchActiveRemoteXbees(uint32_t timeout_millis){
 	printf("millis: %d\r\n", *this->millis);
 	uint32_t start_millis = *this->millis;
 	clearNeighbours();
+
 
 	//repopulate list
 	if (! sendAtCommandAndAwaitWithResponse(AT_DISCOVER_NODES_ND, timeout_millis) ){
@@ -279,12 +279,23 @@ bool XBEE::getDestinationAddressFromXbee(){
 
 //send data to destination xbee
 
-bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, uint32_t timeout_millis){
+bool XBEE::sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis){
+	if (!sendMessageToDestination(message, messageLength,true,timeout_millis)){
+		return false;
+	}else{
+		return true;
+	}
+}
+
+
+bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
 
 
 	if (!destinationXbee.isValid){
-		printf("error: destination not configured.\r\n");
-		return false;
+		printf("error: destination not configured, will try to retrieve destination from local xbee\r\n");
+		if (!getDestinationAddressFromXbee()){
+			return false;
+		}
 	}
 	uint32_t start_millis = *this->millis;
 
@@ -293,7 +304,7 @@ bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, uint3
 	frameData.length = 14 + messageLength;
 
 	frameData.data[0] = 0x10; //frame type = Transmit request
-	frameData.data[1] = getNextIdForSendFrame(true);
+	frameData.data[1] = getNextIdForSendFrame(awaitResponse);
 
 	//destination address
 	for (uint8_t i=0;i<8;i++){
@@ -316,6 +327,14 @@ bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, uint3
 		printf("message sending failed. \r\n");
 		return false;
 	}
+
+	if (awaitResponse){
+		return awaitResponseToLastMessage(timeout_millis);
+	}else{
+		return true; //sending message success. no feedback requested.
+	}
+
+
 
 }
 
@@ -434,28 +453,20 @@ bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t parame
 
 bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, uint32_t timeout_millis ){
 	//execute full at command with response.
-	//senderXbeeLockedWaitingForResponse
 	//set time out time
-	uint32_t start_millis = *this->millis;
 	if (!sendLocalATCommand( atCommand,  parameter, parameterLength , true)){
 		printf("sending AT command failed...\r\n");
 		return false;
 	}
-	//check response
-	bool timedOut = *this->millis > (start_millis + timeout_millis);
-	while (sendingIsLocked() && !timedOut) {
-		//sendLock is released if at response is received and processed. //sendingIsLocked() &&
 
-		refresh();
-		timedOut = *this->millis > (start_millis + timeout_millis);
+	//reponse
+	if(! awaitResponseToLastMessage(timeout_millis)){
+		return false;
 	}
 
-	//check if timed out
-	//if (*this->millis > start_millis + timeout_millis ){
-	if (timedOut){
-		printf("Processing or awaiting AT response timed out...\r\n-->timeout setting[ms]:%d , time it took[ms]: %d\r\n", timeout_millis, *this->millis -  start_millis  );
-		releaseSendLock(); //reset lock (knowing that we will send out a failed message...) if the response arrives anyways, it WILL be processed.
-		return false;
+	//only show response if it contains some payload
+	if (atResponse.responseDataLength>0){
+		displayAtCommandResponseFrameData(&atResponse);
 	}
 	return true;
 }
@@ -572,7 +583,7 @@ void XBEE::processAtResponse(){
 		case AT_DISCOVER_NODES_ND:
 		{
 
-
+			displayAtCommandResponseFrameData(&atResponse);
 			//record the address
 			for (uint8_t i=0;i<8;i++){
 				neighbours[this->numberOfNeighbours].address[i] = atResponse.responseData[2+i];
@@ -754,7 +765,7 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 			buildFrameIndex++;
 		}
 
-#ifdef XBEE_PRINTF_INFO
+#ifdef XBEE_PRINTF_MINIMAL_INFO
 		printf("send frame (before escaping):");
 		for (uint8_t i = 0; i< frameToSend.length;i++){
 			printf("%02x ", frameToSend.frame[i]);
@@ -803,14 +814,36 @@ void XBEE::releaseSendLock(){
 bool XBEE::sendingIsLocked(){
 	return senderXbeeLockedWaitingForResponse;
 }
-/*
-void XBEE::sendSendBuffer(){
-	if (!senderXbeeLockedWaitingForResponse){
-		sendFrame(&frameToSend);
-		sendingFrameIsBusy = false;
+
+
+bool XBEE::awaitResponseToLastMessage(uint32_t  timeout_millis){
+
+	//WARNING: this is not with interrupts, the processor will be occupied here until response arrives or function times out!
+
+	//if a response comes with the id of the last send message. function will return true (sendLock will not be touched, it is assumed that the response handler deals with it.
+	//if no response in the set timeout time, sendLock will be released but function will return false.
+
+	//check response
+	//bool timedOut = *this->millis > (start_millis + timeout_millis);
+	uint32_t start_millis = *this->millis;
+	bool timedOut = *this->millis > (start_millis + timeout_millis);
+
+	while (sendingIsLocked() && !timedOut) {
+		//sendLock is released if at response is received and processed. //sendingIsLocked() &&
+		refresh();
+		timedOut = *this->millis > (start_millis + timeout_millis);
 	}
+
+	//check if timed out
+	//if (*this->millis > start_millis + timeout_millis ){
+	if (timedOut){
+		printf("Processing or awaiting AT response timed out...\r\n");
+		printf("-->timeout setting[ms]:%d , time it took[ms]: %d\r\n", timeout_millis, *this->millis -  start_millis  );
+		releaseSendLock(); //reset lock (knowing that we will send out a failed message...) if the response arrives anyways, it WILL be processed.
+		return false;
+	}
+	return true;
 }
-*/
 
 void XBEE::sendFrame(frame* frame){
 
@@ -964,7 +997,7 @@ void XBEE::displayTopFrameInReceivedFifoBuffer(frameReceive* frame){
 	}
 
 	//receiveFrameBuffers
-#ifdef XBEE_PRINTF_INFO
+#ifdef XBEE_PRINTF_MINIMAL_INFO
 	printf("received Frame (unescaped): ");
 	for (uint8_t i = 0; i< frame->frameRecordIndex; i++)
 	{
