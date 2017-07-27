@@ -10,7 +10,7 @@
 enum commandIds {testInt,
 	testStr,
 	testXbeeGetLocalAddress,
-	xbeeProcess,
+	xbeeToggleSleep,
 	xbeeStats,
 	xbeeClearReceiveBuffers,
 	xbeeGetRemotes,

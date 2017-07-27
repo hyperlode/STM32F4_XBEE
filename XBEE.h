@@ -133,14 +133,20 @@ class XBEE{
 
 public:
 	XBEE();
-
-
 	//administration
 	void init(uint8_t UART_Number, uint32_t baud, uint32_t* millis);
 	void refresh();
 	void reset();
 	void stats();
 	void displayFrame(frame* frame);
+
+
+	//sleep
+	void setSleepPinPB9();
+	void sleep();
+	void wakeUp();
+	bool isSleeping();
+
 
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);
@@ -235,6 +241,10 @@ private:
 	atCommandResponseFrameData	atResponse;
 	transmitStatusFrame transmitResponse;
 	uint32_t* millis;
+
+	bool isAsleep = 0;
+	GPIO_TypeDef* sleepPinPort;
+	uint16_t sleepPin;
 
 };
 

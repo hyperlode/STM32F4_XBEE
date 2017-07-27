@@ -3,16 +3,33 @@
 
 
 const uint8_t atTest[] = {0x08, 0x01, 0x53, 0x48};
+// ------------------------------------------------------------
+//  XBEE administration
+// ------------------------------------------------------------
+
+void XBEE::refresh(){
+	//check if package received.
+	//process
+	processReceivedFrame();
+}
+
+void XBEE::stats(){
+
+	printf("receive package stats: \r\n");
+	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
+		printf("buffer: %d, locked?:%d\r\n",i,this->receiveFrameBuffersIsLocked[i]);
+	}
+
+	printf("packages to be processed(-1 means 'free'):  \r\n");
+	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
+		printf("slot: %d, buffer:%d\r\n",i,this->receiveFrameBuffersToBeProcessed[i]);
+	}
+}
+
+
 
 XBEE::XBEE(){
 	clearReceiveBuffers();
-}
-void XBEE::clearReceiveBuffers(){
-	receiveBufferCounter = 0;
-	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
-		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
-	}
-
 }
 
 void XBEE::reset(){
@@ -22,6 +39,7 @@ void XBEE::reset(){
 
 void XBEE::init(uint8_t UART_Number, uint32_t baud, uint32_t* millis){
 	clearReceiveBuffers();
+	setSleepPinPB9();
 	this->millis = millis;
 	if (UART_Number ==1){
 		//interrupt handler.
@@ -103,26 +121,127 @@ void XBEE::init(uint8_t UART_Number, uint32_t baud, uint32_t* millis){
 	}else{
 		printf("ASSERT ERROR invalid value. Please select or configure valid USART");
 	}
+
+
+
+}
+
+//------------------------------------------------------------------------
+//XBEE sleep behaviour. Important: will only work if SM parameter is configured correctly. i.e. value 1 for defined by pin. (high = sleeps)
+//------------------------------------------------------------------------
+
+void XBEE::setSleepPinPB9()
+{
+	this->sleepPinPort = GPIOB;
+	this->sleepPin = GPIO_Pin_9;
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+
+	GPIO_InitTypeDef GPIO_InitDef;
+	GPIO_InitDef.GPIO_Pin = this->sleepPin;
+	GPIO_InitDef.GPIO_Mode = GPIO_Mode_OUT ;
+	GPIO_InitDef.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitDef.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_InitDef.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(this->sleepPinPort ,&GPIO_InitDef);
+	wakeUp();
+
+}
+void XBEE::sleep(){
+
+	GPIO_SetBits(this->sleepPinPort,this->sleepPin);
+	this->isAsleep = true;
+	printf("Radio sleeps...\r\n");
+}
+
+void XBEE::wakeUp(){
+	GPIO_ResetBits(this->sleepPinPort,this->sleepPin);
+	this->isAsleep = false;
+	printf("Radio woke up...\r\n");
+}
+
+bool XBEE::isSleeping(){
+	return this->isAsleep;
+}
+//------------------------------------------------------------------
+//send data to destination xbee
+//------------------------------------------------------------------
+
+bool XBEE::sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis){
+	if (!sendMessageToDestination(message, messageLength,true,timeout_millis)){
+		return false;
+	}else{
+		return true;
+	}
+}
+
+bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
+
+
+	if (!destinationXbee.isValid){
+		printf("error: destination not configured, will try to retrieve destination from local xbee\r\n");
+		if (!getDestinationAddressFromXbee()){
+			return false;
+		}
+	}
+	uint32_t start_millis = *this->millis;
+
+	//frame type: 0X10 transmit request
+	frameData frameData;
+	frameData.length = 14 + messageLength;
+
+	frameData.data[0] = 0x10; //frame type = Transmit request
+	frameData.data[1] = getNextIdForSendFrame(awaitResponse);
+
+	//destination address
+	for (uint8_t i=0;i<8;i++){
+		frameData.data[2 + i] = destinationXbee.address[i];
+	}
+
+	frameData.data[10] = 0xFF; // 16 bit dest address.
+	frameData.data[11] = 0xFE;
+
+	frameData.data[12] = 0x00; //broadcast radius
+	frameData.data[13] = 0x00; //options
+
+	//copy the message.
+	for (uint16_t i = 0;i<messageLength; i++){
+		frameData.data[14 + i] = message[i];
+	}
+
+	//send the frame
+	if (!buildAndSendFrame(&frameData)){
+		printf("message sending failed. \r\n");
+		return false;
+	}
+
+	if (awaitResponse){
+		return awaitResponseToLastMessage(timeout_millis);
+	}else{
+		return true; //sending message success. no feedback requested.
+	}
+
+
+
 }
 
 
-
-//specific routines
-/*
-void XBEE::sendAtCommandAndLockXbeeUntilResponse(uint16_t atCommand){
-	//list of all remote nodes
-	sendLocalATCommand(atCommand);
-	idOfAtCommandWaitingForResponse = sendFrameIdCounter;
-	senderXbeeLockedWaitingForResponse = true;
+void XBEE::processTransmitStatus(){
+	if (transmitResponse.status == 0x00){
+#ifdef XBEE_PRINTF_INFO
+		printf("transmit success (id:%d)\r\n",transmitResponse.id);
+#endif
+	}else{
+		printf("transmit failed status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
+	}
+	releaseSendLock();
 }
-*/
-
 
 
 
 
 //--------------------------------------------------
-
+//  AT Commands: remote connectivity
+//--------------------------------------------------
 bool XBEE::searchActiveRemoteXbees(uint32_t timeout_millis){
 
 	//set time out time
@@ -224,6 +343,13 @@ void XBEE::displayNeighbours(){
 	}
 }
 
+
+
+
+//------------------------------------------------------------------------------------
+// XBEE local AT Commands
+//------------------------------------------------------------------------------------
+
 bool XBEE::getLocalXbeeAddress(uint32_t timeout_millis){
 
 	//set time out time
@@ -275,79 +401,13 @@ bool XBEE::getDestinationAddressFromXbee(){
 }
 
 
-//------------------
 
-//send data to destination xbee
-
-bool XBEE::sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis){
-	if (!sendMessageToDestination(message, messageLength,true,timeout_millis)){
-		return false;
-	}else{
-		return true;
-	}
-}
-
-
-bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
-
-
-	if (!destinationXbee.isValid){
-		printf("error: destination not configured, will try to retrieve destination from local xbee\r\n");
-		if (!getDestinationAddressFromXbee()){
-			return false;
-		}
-	}
-	uint32_t start_millis = *this->millis;
-
-	//frame type: 0X10 transmit request
-	frameData frameData;
-	frameData.length = 14 + messageLength;
-
-	frameData.data[0] = 0x10; //frame type = Transmit request
-	frameData.data[1] = getNextIdForSendFrame(awaitResponse);
-
-	//destination address
-	for (uint8_t i=0;i<8;i++){
-		frameData.data[2 + i] = destinationXbee.address[i];
-	}
-
-	frameData.data[10] = 0xFF; // 16 bit dest address.
-	frameData.data[11] = 0xFE;
-
-	frameData.data[12] = 0x00; //broadcast radius
-	frameData.data[13] = 0x00; //options
-
-	//copy the message.
-	for (uint16_t i = 0;i<messageLength; i++){
-		frameData.data[14 + i] = message[i];
-	}
-
-	//send the frame
-	if (!buildAndSendFrame(&frameData)){
-		printf("message sending failed. \r\n");
-		return false;
-	}
-
-	if (awaitResponse){
-		return awaitResponseToLastMessage(timeout_millis);
-	}else{
-		return true; //sending message success. no feedback requested.
-	}
+//-----------------------------------------------------------------------------
+// XBEE modem status
+//---------------------------------------------------------------------------
 
 
 
-}
-
-void XBEE::processTransmitStatus(){
-	if (transmitResponse.status == 0x00){
-#ifdef XBEE_PRINTF_INFO
-		printf("transmit success (id:%d)\r\n",transmitResponse.id);
-#endif
-	}else{
-		printf("transmit failed status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
-	}
-	releaseSendLock();
-}
 
 void XBEE::processModemStatus(frameReceive* frame){
 
@@ -379,8 +439,11 @@ void XBEE::processModemStatus(frameReceive* frame){
 
 }
 
-//---------------
+//-----------------------------------------------------------------------------
 //AT Command mode
+//---------------------------------------------------------------------------
+
+
 //void XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* payload ){
 bool XBEE::sendLocalATCommand(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, bool awaitResponse){
 	//always use the timeOut version!
@@ -629,30 +692,6 @@ void XBEE::processAtResponse(){
 	*/
 
 }
-// ------------------------------------------------------------
-//  XBEE administration
-// ------------------------------------------------------------
-
-void XBEE::refresh(){
-	//check if package received.
-	//process
-	processReceivedFrame();
-}
-
-void XBEE::stats(){
-
-	printf("receive package stats: \r\n");
-	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
-		printf("buffer: %d, locked?:%d\r\n",i,this->receiveFrameBuffersIsLocked[i]);
-	}
-
-	printf("packages to be processed(-1 means 'free'):  \r\n");
-	for (int i=0;i< NUMBER_OF_RECEIVEBUFFERS; i++){
-		printf("slot: %d, buffer:%d\r\n",i,this->receiveFrameBuffersToBeProcessed[i]);
-	}
-}
-
-
 
 
 
@@ -1014,9 +1053,13 @@ void XBEE::displayTopFrameInReceivedFifoBuffer(frameReceive* frame){
 	//}
 	//printf("\r\n");
 #endif
+}
 
-
-
+void XBEE::clearReceiveBuffers(){
+	receiveBufferCounter = 0;
+	for (int i=0;i<NUMBER_OF_RECEIVEBUFFERS;i++){
+		this->receiveFrameBuffersToBeProcessed[i]= NOTHING_TO_BE_PROCESSED;
+	}
 
 }
 

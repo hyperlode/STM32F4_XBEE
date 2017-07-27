@@ -11,7 +11,7 @@ void ApplicationController::init(uint32_t* millis){
 	this->millis  = millis;
 	pRadio = &radio;
 	radio.init(1,9600,millis); //https://www.digi.com/support/forum/51792/how-to-change-the-xbee-serial-baud-rate  (if you ever have to be able to reset the baud rate...)
-
+	radio.setSleepPinPB9(); //configure sleep pin.
 
 	//for (uint8_t i = 0; i<8;i++){
 	//	radio.destinationXbee.address[i] = destinationAddress[i];
@@ -23,14 +23,17 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("string test", testStr, string);
 	mainMenu.addItem("xbee get local address test", testXbeeGetLocalAddress, none);
 	mainMenu.addItem("xbee STATS", xbeeStats, none);
-	mainMenu.addItem("xbee PROCESS", xbeeProcess, none);
+	mainMenu.addItem("xbee toggle SLEEP", xbeeToggleSleep, none);
+
 	mainMenu.addItem("xbee CLEAR BUFFERS", xbeeClearReceiveBuffers, none);
+
 	mainMenu.addItem("xbee show NEIGHBOURS", xbeeGetRemotes, none);
 	mainMenu.addItem("xbee AT + string arg (i.e. NI or NIname)", xbeeCustomAtCommand, string);
 	mainMenu.addItem("xbee AT + int arg (i.e. SM or SM1)", xbeeCustomAtCommandConvertArgToInt, string);
 	mainMenu.addItem("xbee RESET", xbeeReset, none);
 	mainMenu.addItem("xbee set DESTINATION", xbeeSetDestination, integerPositive);
 	mainMenu.addItem("xbee get DESTINATION", xbeeGetRemoteAddress, none);
+
 	mainMenu.addItem("xbee send MESSAGE to destination", xbeeSendMessageToRemote, string);
 
 	mainMenu.addItem("toggle send cyclic message to destination each x ms.", sendCyclicMessage, integerPositive);
@@ -81,9 +84,13 @@ void ApplicationController::executeCommand(command command){
 		radio.stats();
 		printf("xbee local address\r\n");
 		break;
-	case xbeeProcess:
+	case xbeeToggleSleep:
 		{
-			radio.processReceivedFrame();
+			if (radio.isSleeping()){
+				radio.wakeUp();
+			}else{
+				radio.sleep();
+			}
 			break;
 		}
 
