@@ -6,6 +6,8 @@
 
 #include "Menu.h"
 #include "XBEE.h"
+#include "stm32f4xx_gpio.h"
+#define BUTTON_PRESS_DELAY 50
 
 enum commandIds {testInt,
 	testStr,
@@ -44,6 +46,14 @@ public:
 
 	uint16_t lengthOfString(char* string, uint16_t maxLength);
 
+	bool checkTestButtonPressed();
+	void initTestButton();
+	bool checkTestButton2Pressed();
+	void initTestButton2();
+
+
+	void configureCyclicMessage(command command);
+
 private:
 	bool cyclicMessageEnabled = false;
 	uint32_t cyclicMessagePeriod_ms = 0;
@@ -55,6 +65,15 @@ private:
 	XBEE* pRadio;
 	//uint8_t destinationAddress [] = {0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87};
 	uint32_t* millis;
+
+	bool testButtonEdgeDetection = false;
+	bool testButtonDebouncedEdgeDetection = false;
+	uint32_t testButtonStartPress;
+
+	bool testButton2EdgeDetection = false;
+	bool testButton2DebouncedEdgeDetection = false;
+	uint32_t testButton2StartPress;
+
 
 };
 

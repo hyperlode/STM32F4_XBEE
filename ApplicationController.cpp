@@ -6,6 +6,10 @@ ApplicationController::ApplicationController(){
 }
 void ApplicationController::init(uint32_t* millis){
 
+	//
+	initTestButton();
+	initTestButton2();
+
 
 	//init radio
 	this->millis  = millis;
@@ -36,7 +40,7 @@ void ApplicationController::init(uint32_t* millis){
 
 	mainMenu.addItem("xbee send MESSAGE to destination", xbeeSendMessageToRemote, string);
 
-	mainMenu.addItem("toggle send cyclic message to destination each x ms.", sendCyclicMessage, integerPositive);
+	mainMenu.addItem("toggle send cyclic message to destination each x ms (0 to disable).", sendCyclicMessage, integerPositive);
 }
 
 void ApplicationController::refresh(){
@@ -52,14 +56,121 @@ void ApplicationController::refresh(){
 	radio.processReceivedFrame();
 	if (cyclicMessageEnabled && *this->millis > lastSentCyclicMessage_ms + cyclicMessagePeriod_ms){
 
-		radio.sendMessageToDestination("Heyhoo",6,false,200);
+		radio.sendMessageToDestination("Heyhoo",6,false,cyclicMessagePeriod_ms);
 
 		lastSentCyclicMessage_ms = *this->millis;
 
 	}
 
+	//check keypress
+	if(checkTestButtonPressed()){
+		command cmd;
+		cmd.id = xbeeSendMessageToRemote;
+		cmd.argument_str = "button1";
+		executeCommand(cmd);
+	}
+
+	//check keypress2
+	if(checkTestButton2Pressed()){
+		command cmd;
+		if (cyclicMessageEnabled){
+			cmd.argument_int =0;
+		}else{
+			cmd.argument_int = 500;
+		}
+
+		cmd.id = sendCyclicMessage;
+
+		cmd.argument_str = "button2";
+		executeCommand(cmd);
+
+	}
 
 }
+
+void ApplicationController::initTestButton(){
+	// Initialize gpio pins with alternating function
+	GPIO_InitTypeDef GPIO_InitStruct;
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+bool ApplicationController::checkTestButtonPressed(){
+	bool input = !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_13);
+	bool triggerPressed = false;
+
+	if (!this->testButtonEdgeDetection && input){
+		this->testButtonStartPress = *this->millis;
+	}
+
+	bool testButtonPressed_Debounced = input && (*this->millis > this->testButtonStartPress + BUTTON_PRESS_DELAY) ;
+
+	if (testButtonPressed_Debounced && !(this->testButtonDebouncedEdgeDetection)){
+		//button is pressed.
+		printf("press\r\n");
+		triggerPressed = true;
+		this->testButtonDebouncedEdgeDetection = true;
+	}
+	this->testButtonDebouncedEdgeDetection = testButtonPressed_Debounced;
+	this->testButtonEdgeDetection = input; //edge detector handling.
+	return triggerPressed;
+
+}
+
+
+
+void ApplicationController::initTestButton2(){
+	// Initialize gpio pins with alternating function
+	GPIO_InitTypeDef GPIO_InitStruct;
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_14;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+bool ApplicationController::checkTestButton2Pressed(){
+	bool input = !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_14);
+	bool triggerPressed = false;
+
+	if (!this->testButton2EdgeDetection && input){
+		this->testButton2StartPress = *this->millis;
+	}
+
+	bool testButton2Pressed_Debounced = input && (*this->millis > this->testButton2StartPress + BUTTON_PRESS_DELAY) ;
+
+	if (testButton2Pressed_Debounced && !(this->testButton2DebouncedEdgeDetection)){
+		//button is pressed.
+		printf("press2\r\n");
+		triggerPressed = true;
+		this->testButton2DebouncedEdgeDetection = true;
+	}
+	this->testButton2DebouncedEdgeDetection = testButton2Pressed_Debounced;
+	this->testButton2EdgeDetection = input; //edge detector handling.
+	return triggerPressed;
+
+}
+
+
+void ApplicationController::configureCyclicMessage(command command){
+	//radio.displayNeighbours();
+	 if(command.argument_int == 0){
+		 this->cyclicMessageEnabled = false;
+	 }else{
+		 this->cyclicMessageEnabled = true;
+	 }
+	cyclicMessagePeriod_ms = command.argument_int;
+}
+
+
+
 void ApplicationController::executeCommand(command command){
 	switch (command.id){
 
@@ -96,7 +207,7 @@ void ApplicationController::executeCommand(command command){
 
 	case xbeeGetRemotes:
 			{
-				radio.searchActiveRemoteXbees(10000);
+				radio.searchActiveRemoteXbees(1000);
 				radio.displayNeighbours();
 				break;
 			}
@@ -181,9 +292,7 @@ void ApplicationController::executeCommand(command command){
 
 	case sendCyclicMessage:
 	{
-		//radio.displayNeighbours();
-		this->cyclicMessageEnabled = !this->cyclicMessageEnabled; //toggle
-		cyclicMessagePeriod_ms = command.argument_int;
+		configureCyclicMessage(command);
 
 		break;
 	}
