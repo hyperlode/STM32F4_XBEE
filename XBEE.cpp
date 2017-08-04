@@ -167,6 +167,7 @@ bool XBEE::isSleeping(){
 //------------------------------------------------------------------
 
 bool XBEE::sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis){
+	//printf("messg length : %d , \r\n", messageLength);
 	if (!sendMessageToDestination(message, messageLength,true,timeout_millis)){
 		return false;
 	}else{
@@ -492,24 +493,32 @@ bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t timeou
 }
 
 bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint32_t parameterInt,  uint32_t timeout_millis){
+
+	//in API frames, the integer numbers are sent as number not as ascii! so: 1 is 0x01  and not 0x31
+
 	//convert int to byte array (for parameter).
-	//printf("parameter %d\r\n",parameterInt);
+	printf("paramfffeter %d\r\n",parameterInt);
 	uint8_t parameter [AT_DATA_SIZE];
 
-	uint8_t bitFieldByteLength = 66;
+	#define NONSENSE_VALUE 66
+
+	uint8_t bitFieldByteLength = NONSENSE_VALUE;
 
 	for (uint8_t i = 0;i<4;i++){
-		parameter[i] = (uint8_t)(parameterInt>>(8*(3-i)));//parameter[i] = (uint8_t)parameterInt>>(8*(4-i));
-		if (bitFieldByteLength == 66 && parameter[i] !=0){
+		//split the 32 bits in four parts of 8 bits (starting with msb)
+		parameter[i] = (uint8_t)(parameterInt>>(8*(3-i)));//parameter[i] = (uint8_t)parameterInt>>(8*(4-i)); //32bit parameterint, chop in pieces.
+
+		//check for first non zero byte.
+		if (bitFieldByteLength == NONSENSE_VALUE && parameter[i] != 0){
+
 			bitFieldByteLength = (4-i);
-		//	printf("not zero!");
 		}
-	//	printf("ahoi %02x \r\n", parameter[i]);
 	}
 
-//	printf("bif ield length: %d",bitFieldByteLength);
-//	printf("bif ield length: %d",parameter[3]);
-//	printf("bif ield length: %d",parameter[2]);
+	//if int was zero, send a zero
+	if (bitFieldByteLength == 66){
+		bitFieldByteLength = 1; //the sent byte will be once: 0x00
+	}
 
 	XBEE::sendAtCommandAndAwaitWithResponse(atCommand, &parameter[4-bitFieldByteLength], bitFieldByteLength, timeout_millis );
 }
@@ -521,16 +530,23 @@ bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint8_t* parame
 		printf("sending AT command failed...\r\n");
 		return false;
 	}
-
+	printf("given lengthss \r\n: %d", parameterLength);
 	//reponse
 	if(! awaitResponseToLastMessage(timeout_millis)){
 		return false;
 	}
 
+
 	//only show response if it contains some payload
 	if (atResponse.responseDataLength>0){
 		displayAtCommandResponseFrameData(&atResponse);
 	}
+
+	//sent command failed.
+	if (atResponse.status != 0){
+		return false;
+	}
+
 	return true;
 }
 
@@ -598,19 +614,43 @@ bool XBEE::atCommandSuccessfullyExecuted(){
 */
 void XBEE::processAtResponse(){
 
-	//response status
 
 	if (!atResponse.status){
 #ifdef XBEE_PRINTF_DEBUG
-		printf("At response received (at %dms) %02x:",*this->millis,atResponse.atCommand);
-		printf("success.\r\n");
+
+		printf("At response received (at %dms) %02x:(code:%d)",*this->millis,atResponse.atCommand, atResponse.status);
 #endif
 	}else{
-		printf("At response received (at %dms) %02x:",*this->millis,atResponse.atCommand);
-		printf("failed.(code: %d)\r\n", atResponse.status);
-		return;
-	//printf("-->response to neighbourfinding (id:%d)",idOfFrameWaitingForResponse);
+		printf("At response received (at %dms) %02x:(code:%d)",*this->millis,atResponse.atCommand, atResponse.status);
 	}
+
+	switch(atResponse.status){
+	case 0:
+#ifdef XBEE_PRINTF_DEBUG
+		printf("success.\r\n");
+
+
+#endif
+		break;
+	case 1:
+		printf("ERROR.\r\n");
+		break;
+	case 2:
+		printf("Invalid command.\r\n");
+		break;
+	case 3:
+		printf("Invalid parameter.\r\n");
+		break;
+	case 4:
+		printf("tx failure\r\n");
+		break;
+	default:
+		printf("failed.(code: %d)\r\n", atResponse.status);
+		break;
+
+
+	}
+
 
 	//response actions
 	switch (atResponse.atCommand){
@@ -745,88 +785,92 @@ void XBEE::displayFrame(frame* frame){
 bool XBEE::buildAndSendFrame(frameData* frameData){
 
 	//lock the xbee until message sent, or timeout
-
-	if (!senderXbeeLockedWaitingForResponse  ){ //&& !sendingFrameIsBusy
-
-		if (frameData->data[1]){ //if ID is not zero, wait for response
-			//printf("will lock sending until response arrived.");
-			senderXbeeLockedWaitingForResponse = true;
-			idOfFrameWaitingForResponse = frameData->data[1];
-		}
-
-		frameToSend.frame[0] = 0x7E; //start delimiter
-		frameToSend.frame[1] = frameData->length >>8; //frame data length msb
-		frameToSend.frame[2] = frameData->length & 0xFF; //frame data length lsb //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
-
-		uint16_t buildFrameIndex = 3; //add frame data
-		for (uint8_t i=0; i<frameData->length; i++){
-			uint8_t byteToSend = frameData->data[i];
-			frameToSend.frame[buildFrameIndex] = frameData->data[i];
-			buildFrameIndex++;
-		}
-
-		//add checksum
-		frameToSend.frame[buildFrameIndex] = calculateCheckSum((uint8_t*)frameData->data, 0 ,frameData->length);
-		frameToSend.length = frameData->length + 4;
-
-		//escape frame
-		frameToSend.lengthEscaped = frameToSend.length; //add bytes each time a character is escaped
-		frameToSend.frameEscaped[0] = 0x7E;
-		buildFrameIndex = 1;
-		for (uint8_t i=1; i<frameToSend.length; i++){
-
-			uint8_t byteToSend = frameToSend.frame[i];
-			//printf("byte: %02x \r\n",byteToSend);
-
-			if (byteToSend == 0x11|| byteToSend == 0x13 || byteToSend == 0x7E || byteToSend == 0x7D){
-				frameToSend.lengthEscaped++;
-				frameToSend.frameEscaped[buildFrameIndex] = 0x7D;
-				buildFrameIndex++;
-				frameToSend.frameEscaped[buildFrameIndex] = byteToSend ^ 0x20;
-				/*
-					if (frameData->data[i] == 0x11 ){
-
-						frameToSend.frame[buildFrameIndex] = 0x31;
-					} else if (frameData->data[i] == 0x13 ){
-						frameToSend.frame[buildFrameIndex] = 0x33;
-
-					} else if (frameData->data[i] == 0x7E ){
-						frameToSend.frame[buildFrameIndex] = 0x5E;
-
-					} else if (frameData->data[i] == 0x7D ){
-						frameToSend.frame[buildFrameIndex] = 0x5D;
-
-					}
-					*/
-			}else{
-				frameToSend.frameEscaped[buildFrameIndex] = frameToSend.frame[i];
-			}
-			buildFrameIndex++;
-		}
-
-#ifdef XBEE_PRINTF_MINIMAL_INFO
-		printf("send frame (before escaping):");
-		for (uint8_t i = 0; i< frameToSend.length;i++){
-			printf("%02x ", frameToSend.frame[i]);
-		}
-		printf("\r\n");
-#endif
-				/*
-		printf("\r\nframe built.\r\n");
-			for (uint8_t i = 0; i< frameToSend.lengthEscaped;i++){
-				printf("%02x ", frameToSend.frameEscaped[i]);
-			}
-		/**/
-		sendFrame(&frameToSend);
-		return true;
-	}else{
-		if (senderXbeeLockedWaitingForResponse){
+	if (senderXbeeLockedWaitingForResponse){
+		if (senderXbeeLockedWaitingForResponse){//&& sendingFrameIsBusy
 			printf("error (not sent): busy waiting for response from previous message.");
 		}else{
 			printf("busy processing and sending previous frame.");
 		}
 		return false;
 	}
+
+	if (isSleeping()){
+		printf("XBEE sleeping. Sending nor receiving.\r\n");
+
+	}
+
+	if (frameData->data[1]){ //if ID is not zero, wait for response
+		//printf("will lock sending until response arrived.");
+		senderXbeeLockedWaitingForResponse = true;
+		idOfFrameWaitingForResponse = frameData->data[1];
+	}
+	printf("dataalength: %d", frameData->length);
+	frameToSend.frame[0] = 0x7E; //start delimiter
+	frameToSend.frame[1] = frameData->length >>8; //frame data length msb
+	frameToSend.frame[2] = frameData->length & 0xFF; //frame data length lsb //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
+
+	uint16_t buildFrameIndex = 3; //add frame data
+	for (uint8_t i=0; i<frameData->length; i++){
+		uint8_t byteToSend = frameData->data[i];
+		frameToSend.frame[buildFrameIndex] = frameData->data[i];
+		buildFrameIndex++;
+	}
+
+	//add checksum
+	frameToSend.frame[buildFrameIndex] = calculateCheckSum((uint8_t*)frameData->data, 0 ,frameData->length);
+	frameToSend.length = frameData->length + 4;
+
+	//escape frame
+	frameToSend.lengthEscaped = frameToSend.length; //add bytes each time a character is escaped
+	frameToSend.frameEscaped[0] = 0x7E;
+	buildFrameIndex = 1;
+	for (uint8_t i=1; i<frameToSend.length; i++){
+
+		uint8_t byteToSend = frameToSend.frame[i];
+		//printf("byte: %02x \r\n",byteToSend);
+
+		if (byteToSend == 0x11|| byteToSend == 0x13 || byteToSend == 0x7E || byteToSend == 0x7D){
+			frameToSend.lengthEscaped++;
+			frameToSend.frameEscaped[buildFrameIndex] = 0x7D;
+			buildFrameIndex++;
+			frameToSend.frameEscaped[buildFrameIndex] = byteToSend ^ 0x20;
+			/*
+				if (frameData->data[i] == 0x11 ){
+
+					frameToSend.frame[buildFrameIndex] = 0x31;
+				} else if (frameData->data[i] == 0x13 ){
+					frameToSend.frame[buildFrameIndex] = 0x33;
+
+				} else if (frameData->data[i] == 0x7E ){
+					frameToSend.frame[buildFrameIndex] = 0x5E;
+
+				} else if (frameData->data[i] == 0x7D ){
+					frameToSend.frame[buildFrameIndex] = 0x5D;
+
+				}
+				*/
+		}else{
+			frameToSend.frameEscaped[buildFrameIndex] = frameToSend.frame[i];
+		}
+		buildFrameIndex++;
+	}
+
+#ifdef XBEE_PRINTF_MINIMAL_INFO
+	printf("send frame (before escaping):");
+	for (uint8_t i = 0; i< frameToSend.length;i++){
+		printf("%02x ", frameToSend.frame[i]);
+	}
+	printf("\r\n");
+#endif
+			/*
+	printf("\r\nframe built.\r\n");
+		for (uint8_t i = 0; i< frameToSend.lengthEscaped;i++){
+			printf("%02x ", frameToSend.frameEscaped[i]);
+		}
+	/**/
+	sendFrame(&frameToSend);
+	return true;
+
 
 }
 

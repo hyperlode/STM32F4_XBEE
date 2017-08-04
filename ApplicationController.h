@@ -44,7 +44,7 @@ public:
 
 	void XbeeUartInterruptHandler(char c);
 
-	uint16_t lengthOfString(char* string, uint16_t maxLength);
+	uint16_t lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter);
 
 	bool checkTestButtonPressed();
 	void initTestButton();

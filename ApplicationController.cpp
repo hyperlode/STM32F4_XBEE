@@ -207,7 +207,7 @@ void ApplicationController::executeCommand(command command){
 
 	case xbeeGetRemotes:
 			{
-				radio.searchActiveRemoteXbees(1000);
+				radio.searchActiveRemoteXbees(5000);
 				radio.displayNeighbours();
 				break;
 			}
@@ -219,7 +219,7 @@ void ApplicationController::executeCommand(command command){
 			printf(".%02x\r\n",command.argument_str[i]);
 		}
 */
-		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
+		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2, true);
 
 		if (len<3){
 			printf("user error: AT command is minimum two letters.\r\n");
@@ -228,13 +228,18 @@ void ApplicationController::executeCommand(command command){
 		uint32_t argInt = mainMenu.convertStringToPositiveInt(&command.argument_str[2], len);
 
 		if (argInt == -1){
-			printf("number invalid.: %08x",argInt);
+			printf("number invalid.: %08x\r\n",argInt);
 		}else{
+			printf("number: %08x\r\n",argInt);
+			printf("number: %d\r\n",argInt);
 
 			uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
+			printf("str: %04x\r\n",atCmd);
 			if (len==3){
+				printf("noArg\r\n",atCmd);
 				radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
 			}else{
+				printf("withArg\r\n",atCmd);
 				if (radio.sendAtCommandAndAwaitWithResponse(atCmd,argInt,1000)){
 					radio.saveChangesinLocalXbee();
 				}
@@ -254,7 +259,7 @@ void ApplicationController::executeCommand(command command){
 		}
 /**/
 
-		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2);
+		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE + 2,true);
 
 		if (len<3){
 			printf("user error: AT command is minimum two letters.\r\n");
@@ -263,7 +268,7 @@ void ApplicationController::executeCommand(command command){
 		uint16_t atCmd = command.argument_str[0] <<8 | command.argument_str[1];
 		if (len==3){
 			//printf("WITHOUT arg");
-			radio.sendAtCommandAndAwaitWithResponse(atCmd, 1000);
+			radio.sendAtCommandAndAwaitWithResponse(atCmd, 10000);
 		}else{
 			//printf("WITH arg");
 			if (radio.sendAtCommandAndAwaitWithResponse(atCmd, (uint8_t*)(&command.argument_str[2]), len-3, 1000)){ //len-3 because '/0' will not be part of the sent parameter.
@@ -279,7 +284,7 @@ void ApplicationController::executeCommand(command command){
 	}
 	case xbeeSendMessageToRemote:
 	{
-		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE);
+		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE, false);
 		radio.sendMessageToDestinationAwaitResponse(command.argument_str,len,200);
 		break;
 	}
@@ -326,7 +331,8 @@ bool ApplicationController::isBusy(){
 	return isLocked;
 }
 
-uint16_t ApplicationController::lengthOfString(char* string, uint16_t maxLength){
+uint16_t ApplicationController::lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter){
+
 	// 0x00 equal '\0' , and is included in the char array itself.   lode\0   length=5.
 	uint16_t length = 0;
 	while (string[length]!= '\0' && length < maxLength-1){
@@ -336,6 +342,12 @@ uint16_t ApplicationController::lengthOfString(char* string, uint16_t maxLength)
 	if (length >= maxLength){
 		printf("ASSERT ERROR: string not terminated or longer than allowed.");
 	}
-	return length;
+	//printf("lenlen: %d", - includeStringDelimiter);
+
+	if (includeStringDelimiter){
+		return length   ;
+	}else{
+		return length -1  ;
+	}
 
 }
