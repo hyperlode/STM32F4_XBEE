@@ -25,7 +25,8 @@ typedef enum
   PANEL_1 = 0,
   PANEL_2 = 1,
   PANEL_3 = 2,
-  PANEL_4
+  PANEL_4 = 3,
+  WAVESHARE_PORT = 4
 } PanelId_TypeDef;
 
 
@@ -116,6 +117,9 @@ class IOBoard{
 		bool pinsStatePullUpLow[8];
 		bool pinsStatePullUpHigh[8];
 		bool buttonsInitialized;
+
+
+		bool multiPlexingLedArray = false;
 
 		uint16_t numberOfLeds;
 		uint16_t scanCathode;

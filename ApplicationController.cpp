@@ -11,6 +11,16 @@ void ApplicationController::init(uint32_t* millis){
 	initTestButton2();
 	initTestButton3();
 
+
+	waveShareIO.init(WAVESHARE_PORT);
+	waveShareIO.initLeds();
+
+	waveShareIO.setLed(0,true);
+	waveShareIO.setLed(1,true);
+	waveShareIO.setLed(2,true);
+	waveShareIO.setLedBlinkPeriodMillis(3,500);
+	waveShareIO.setLed(3,true);
+
 	//init radio
 	this->millis  = millis;
 	pRadio = &radio;
@@ -44,6 +54,9 @@ void ApplicationController::init(uint32_t* millis){
 }
 
 void ApplicationController::refresh(){
+
+	waveShareIO.refresh(*millis);
+
 	if (mainMenu.commandWaitingToBeExecuted()){
 		command cmd;
 		cmd = mainMenu.getPreparedCommand();

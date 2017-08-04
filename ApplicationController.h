@@ -7,6 +7,9 @@
 #include "Menu.h"
 #include "XBEE.h"
 #include "stm32f4xx_gpio.h"
+
+#include "IOBoard.h"
+
 #define BUTTON_PRESS_DELAY 50
 
 enum commandIds {testInt,
@@ -62,6 +65,9 @@ private:
 	Menu mainMenu;
 	XBEE radio;
 	XBEE* pRadio;
+
+
+	IOBoard waveShareIO;
 	//uint8_t destinationAddress [] = {0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87};
 	uint32_t* millis;
 
