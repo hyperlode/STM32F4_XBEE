@@ -26,8 +26,6 @@ enum commandIds {testInt,
 };
 
 
-
-
 class ApplicationController{
 
 public:
@@ -50,7 +48,8 @@ public:
 	void initTestButton();
 	bool checkTestButton2Pressed();
 	void initTestButton2();
-
+	bool checkTestButton3Pressed();
+	void initTestButton3();
 
 	void configureCyclicMessage(command command);
 
@@ -73,6 +72,10 @@ private:
 	bool testButton2EdgeDetection = false;
 	bool testButton2DebouncedEdgeDetection = false;
 	uint32_t testButton2StartPress;
+
+	bool testButton3EdgeDetection = false;
+	bool testButton3DebouncedEdgeDetection = false;
+	uint32_t testButton3StartPress;
 
 
 };

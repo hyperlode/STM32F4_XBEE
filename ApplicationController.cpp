@@ -9,7 +9,7 @@ void ApplicationController::init(uint32_t* millis){
 	//
 	initTestButton();
 	initTestButton2();
-
+	initTestButton3();
 
 	//init radio
 	this->millis  = millis;
@@ -64,6 +64,7 @@ void ApplicationController::refresh(){
 
 	//check keypress
 	if(checkTestButtonPressed()){
+		printf("button 1 pressed \r\n");
 		command cmd;
 		cmd.id = xbeeSendMessageToRemote;
 		cmd.argument_str = "button1";
@@ -72,6 +73,7 @@ void ApplicationController::refresh(){
 
 	//check keypress2
 	if(checkTestButton2Pressed()){
+		printf("button 2 pressed \r\n");
 		command cmd;
 		if (cyclicMessageEnabled){
 			cmd.argument_int =0;
@@ -86,6 +88,21 @@ void ApplicationController::refresh(){
 
 	}
 
+	//check keypress3
+	if(checkTestButton3Pressed()){
+		printf("button 3 pressed \r\n");
+
+		command cmd;
+		cmd.id = xbeeGetRemotes;
+		//cmd.argument_str = "button2";
+		executeCommand(cmd);
+
+	//	command cmd;
+		cmd.id = xbeeSetDestination;
+		cmd.argument_int = 0; //set first found neighbour as destination.
+		executeCommand(cmd);
+
+	}
 }
 
 void ApplicationController::initTestButton(){
@@ -158,6 +175,40 @@ bool ApplicationController::checkTestButton2Pressed(){
 
 }
 
+
+void ApplicationController::initTestButton3(){
+	// Initialize gpio pins with alternating function
+	GPIO_InitTypeDef GPIO_InitStruct;
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+bool ApplicationController::checkTestButton3Pressed(){
+	bool input = !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_15);
+	bool triggerPressed = false;
+
+	if (!this->testButton3EdgeDetection && input){
+		this->testButton3StartPress = *this->millis;
+	}
+
+	bool testButton3Pressed_Debounced = input && (*this->millis > this->testButton3StartPress + BUTTON_PRESS_DELAY) ;
+
+	if (testButton3Pressed_Debounced && !(this->testButton3DebouncedEdgeDetection)){
+		//button is pressed.
+		printf("press3\r\n");
+		triggerPressed = true;
+		this->testButton3DebouncedEdgeDetection = true;
+	}
+	this->testButton3DebouncedEdgeDetection = testButton3Pressed_Debounced;
+	this->testButton3EdgeDetection = input; //edge detector handling.
+	return triggerPressed;
+
+}
 
 void ApplicationController::configureCyclicMessage(command command){
 	//radio.displayNeighbours();

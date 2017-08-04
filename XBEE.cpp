@@ -175,6 +175,56 @@ bool XBEE::sendMessageToDestinationAwaitResponse(char* message, uint16_t message
 	}
 }
 
+
+
+void XBEE::generateFrameType0x00(frameData* frameData,char* message, uint16_t messageLength, uint8_t id){
+	//https://www.digi.com/resources/documentation/digidocs/pdfs/90001500.pdf  p117
+	(*frameData).length = 11 + messageLength;
+
+	frameData->data[0] = 0x00; //frame type = Transmit request
+	frameData->data[1] = id;
+
+	//destination address
+	for (uint8_t i=0;i<8;i++){
+		frameData->data[2 + i] = destinationXbee.address[i];
+		//printf("b: %02x",destinationXbee.address[i]);
+	}
+
+	frameData->data[10] = 0x00; //options
+
+	//copy the message.  max 110bytes
+	for (uint16_t i = 0;i<messageLength; i++){
+		frameData->data[11 + i] = message[i];
+	}
+}
+
+void XBEE::generateFrameType0x10(frameData* frameData,char* message, uint16_t messageLength, uint8_t id){
+
+	frameData->length = 14 + messageLength;
+
+	frameData->data[0] = 0x10; //frame type = Transmit request
+	frameData->data[1] = id;
+
+	//destination address
+	for (uint8_t i=0;i<8;i++){
+		frameData->data[2 + i] = destinationXbee.address[i];
+	}
+
+	frameData->data[10] = 0xFF; // 16 bit dest address->
+	frameData->data[11] = 0xFE;
+
+	frameData->data[12] = 0x00; //broadcast radius
+	frameData->data[13] = 0x00; //options
+
+	//copy the message.
+	for (uint16_t i = 0;i<messageLength; i++){
+		frameData->data[14 + i] = message[i];
+	}
+}
+
+
+
+
 bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
 
 
@@ -186,28 +236,17 @@ bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool 
 	}
 	uint32_t start_millis = *this->millis;
 
-	//frame type: 0X10 transmit request
+
 	frameData frameData;
-	frameData.length = 14 + messageLength;
 
-	frameData.data[0] = 0x10; //frame type = Transmit request
-	frameData.data[1] = getNextIdForSendFrame(awaitResponse);
 
-	//destination address
-	for (uint8_t i=0;i<8;i++){
-		frameData.data[2 + i] = destinationXbee.address[i];
-	}
+#ifdef FIRMWARE_802.15.4_TH
+	generateFrameType0x00(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse));
+#else
+	//frame type: 0X10 transmit request
+	generateFrameType0x10(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse));
+#endif
 
-	frameData.data[10] = 0xFF; // 16 bit dest address.
-	frameData.data[11] = 0xFE;
-
-	frameData.data[12] = 0x00; //broadcast radius
-	frameData.data[13] = 0x00; //options
-
-	//copy the message.
-	for (uint16_t i = 0;i<messageLength; i++){
-		frameData.data[14 + i] = message[i];
-	}
 
 	//send the frame
 	if (!buildAndSendFrame(&frameData)){
@@ -237,7 +276,16 @@ void XBEE::processTransmitStatus(){
 	releaseSendLock();
 }
 
-
+void XBEE::processTxTransmitStatus(){
+	if (transmitResponse.status == 0x00){
+#ifdef XBEE_PRINTF_INFO
+		printf("transmit success (id:%d)\r\n",transmitResponse.id);
+#endif
+	}else{
+		printf("transmit failed status(id:%d): %02x\r\n",transmitResponse.id,transmitResponse.status);
+	}
+	releaseSendLock();
+}
 
 
 //--------------------------------------------------
@@ -975,12 +1023,22 @@ void XBEE::processReceivedFrame(){
 	apiFrameIsValid(fifoTopFrame);
 
 	//check type of frame.
-	//getTypeOfFrame()
-
+	//printf("frametype: %02x.\r\n",frameType );
 	//check if it is a requested response.
 	if (frameType == XBEE_FRAME_TYPE_TRANSMIT_STATUS ){
 		if (transmitResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
 			processTransmitStatus();
+		}
+		#ifdef XBEE_PRINTF_DEBUG
+				printf("TX transmit status received \r\n. \r\n");
+		#endif
+	}else if( frameType == XBEE_FRAME_TYPE_TX_TRANSMIT_STATUS){
+		if (transmitResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
+			processTxTransmitStatus();
+
+#ifdef XBEE_PRINTF_DEBUG
+			printf("TX transmit status received \r\n. \r\n");
+#endif
 		}
 	}else if( frameType == XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE){
 		if (atResponse.id == idOfFrameWaitingForResponse && senderXbeeLockedWaitingForResponse){
@@ -1043,7 +1101,7 @@ void XBEE::deleteTopFrameInReceivedFifoBuffer(){
 uint8_t XBEE::parseFrame (frameReceive* frame){
 
 	uint8_t frameType = frame->frame[FRAME_FRAMEDATA_STARTINDEX];
-
+	//printf("heeey type: %02x" ,frameType );
 	//AT response parsing
 	if (frameType == XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE){
 #ifdef XBEE_PRINTF_DEBUG
@@ -1064,7 +1122,13 @@ uint8_t XBEE::parseFrame (frameReceive* frame){
 		//transmit status
 		transmitResponse.id =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
 		transmitResponse.status =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 5];
+
+	}else if (frameType == XBEE_FRAME_TYPE_TX_TRANSMIT_STATUS){
+		//transmit status
+		transmitResponse.id =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
+		transmitResponse.status =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 2];
 	}
+
 	return frameType;
 }
 

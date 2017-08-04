@@ -7,9 +7,15 @@
 #include "misc.h"
 #include <stdio.h>
 
+#define FIRMWARE_802.15.4_TH
+
+
 //#define XBEE_PRINTF_DEBUG
 //#define XBEE_PRINTF_INFO
 #define XBEE_PRINTF_MINIMAL_INFO
+
+
+
 
 #define RECEIVE_BUFFER_SIZE 100
 #define NUMBER_OF_SENDBUFFERS 3
@@ -50,6 +56,10 @@
 
 #define XBEE_FRAME_TYPE_AT_COMMAND 0x08
 #define XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE 0x88
+
+#define XBEE_FRAME_TYPE_TX_TRANSMIT_REQUEST_64_BIT 0x00
+#define XBEE_FRAME_TYPE_TX_TRANSMIT_STATUS 0x89
+
 #define XBEE_FRAME_TYPE_TRANSMIT_REQUEST 0x10
 #define XBEE_FRAME_TYPE_MODEM_STATUS 0x8A
 #define XBEE_FRAME_TYPE_TRANSMIT_STATUS 0x8B
@@ -150,6 +160,9 @@ public:
 
 	uint8_t calculateCheckSum(uint8_t* bytes, uint8_t startIndex, uint32_t length);
 	bool apiFrameIsValid(frameReceive* package);
+
+	void generateFrameType0x00(frameData* frameData,char* message, uint16_t messageLength, uint8_t id);
+	void generateFrameType0x10(frameData* frameData,char* message, uint16_t messageLength, uint8_t id);
 	bool sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis);
 	bool sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis);
 
@@ -168,7 +181,7 @@ public:
 
 	//transmit request
 	void processTransmitStatus();
-
+	void processTxTransmitStatus();
 
 	//AT
 
