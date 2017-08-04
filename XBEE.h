@@ -44,6 +44,7 @@
 #define AT_AVAILABLE_FREQUENCIES_AF 0x4146
 #define AT_APPLY_CHANGES_AC 0x4143
 #define AT_WRITE_WR 0x5752
+#define AT_NODE_IDENTIFIER_NI 0x4E49
 
 //used for xbee communication. All tests done with XBEE PRO S3B in API2 mode.
 #define API_MODE 2 //ASSUME API2 is used (escape functionality built in). No other mode available.
@@ -220,13 +221,14 @@ public:
 	bool sendingIsLocked();
 
 
+	xbeeRadio destinationXbee;
+	xbeeRadio senderXbee;
 
 private:
 
 	bool sendLocalATCommand(uint16_t atCommand, uint8_t* parameter, uint8_t parameterLength, bool awaitResponse); //only make time out version public
 
-	xbeeRadio destinationXbee;
-	xbeeRadio senderXbee;
+
 	uint32_t baud;
 
 	uint8_t receiveBufferCounter =0;

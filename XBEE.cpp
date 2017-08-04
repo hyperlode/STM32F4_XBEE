@@ -578,7 +578,7 @@ bool XBEE::sendAtCommandAndAwaitWithResponse(uint16_t atCommand, uint8_t* parame
 		printf("sending AT command failed...\r\n");
 		return false;
 	}
-	printf("given lengthss \r\n: %d", parameterLength);
+	//printf("given lengthss \r\n: %d", parameterLength);
 	//reponse
 	if(! awaitResponseToLastMessage(timeout_millis)){
 		return false;
@@ -702,6 +702,15 @@ void XBEE::processAtResponse(){
 
 	//response actions
 	switch (atResponse.atCommand){
+		case AT_NODE_IDENTIFIER_NI:
+			printf("datalength: %d \r\n",atResponse.responseDataLength);
+			for (uint8_t i =0;i<atResponse.responseDataLength;i++){
+				senderXbee.name[i] = atResponse.responseData[i];
+			}
+			senderXbee.name[atResponse.responseDataLength] = '\0';
+			releaseSendLock();
+			break;
+
 		case AT_MAC_DESTINATION_HIGH_DH:
 			for (uint8_t i =0;i<4;i++){
 				destinationXbee.address[i] = atResponse.responseData[i];
@@ -852,7 +861,7 @@ bool XBEE::buildAndSendFrame(frameData* frameData){
 		senderXbeeLockedWaitingForResponse = true;
 		idOfFrameWaitingForResponse = frameData->data[1];
 	}
-	printf("dataalength: %d", frameData->length);
+	//printf("dataalength: %d", frameData->length);
 	frameToSend.frame[0] = 0x7E; //start delimiter
 	frameToSend.frame[1] = frameData->length >>8; //frame data length msb
 	frameToSend.frame[2] = frameData->length & 0xFF; //frame data length lsb //http://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit

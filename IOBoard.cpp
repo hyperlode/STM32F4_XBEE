@@ -132,6 +132,7 @@ void IOBoard::init(PanelId_TypeDef panelId){
 			ledAnodePins[3] = GPIO_Pin_10 ;
 			ledPort = GPIOE;
 			ledPeripheral = RCC_AHB1Periph_GPIOE;
+
 			multiPlexingLedArray = false;
 /*
 			numberOfButtons =4;

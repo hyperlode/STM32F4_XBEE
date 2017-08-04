@@ -12,6 +12,8 @@
 
 #include "ApplicationController.h"
 
+#include "generalFunctions.h"
+
 #ifdef __cplusplus
 	//#include "MachineControl.h"
 
@@ -67,7 +69,7 @@
 	ApplicationController* pXbeePeerToPeerDemo;
 
 
-	bool stringsAreEqual(char* A, char*B);
+	//bool stringsAreEqual(char* A, char*B);
 
 	//uint8_t testData [] = {0x10, 0x01, 0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87, 0xFF, 0xFE, 0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
 

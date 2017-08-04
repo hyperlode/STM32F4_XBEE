@@ -9,8 +9,22 @@
 #include "stm32f4xx_gpio.h"
 
 #include "IOBoard.h"
+#include "generalFunctions.h"
 
 #define BUTTON_PRESS_DELAY 50
+
+#define LED_BASESTATION 0
+#define LED_BAILTRANSDUCER 1
+#define LED_CROWDTRANSDUCER 2
+
+enum ptmRoles {
+	baseStation,
+	bailTransducer,
+	crowdTransducer,
+	pinTransducer,
+	baseStationPortable
+
+};
 
 enum commandIds {testInt,
 	testStr,
@@ -25,7 +39,8 @@ enum commandIds {testInt,
 	xbeeReset,
 	xbeeSetDestination,
 	xbeeGetRemoteAddress,
-	xbeeSendMessageToRemote
+	xbeeSendMessageToRemote,
+	ptmGetRoleFromXbeeName
 };
 
 
@@ -82,6 +97,8 @@ private:
 	bool testButton3EdgeDetection = false;
 	bool testButton3DebouncedEdgeDetection = false;
 	uint32_t testButton3StartPress;
+
+	ptmRoles ptmRole;
 
 
 };

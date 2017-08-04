@@ -103,6 +103,7 @@
     <File name="EncoderTimer.h" path="EncoderTimer.h" type="1"/>
     <File name="main.h" path="main.h" type="1"/>
     <File name="ApplicationController.h" path="ApplicationController.h" type="1"/>
+    <File name="generalFunctions.h" path="generalFunctions.h" type="1"/>
     <File name="usb_lib/otg" path="" type="2"/>
     <File name="usb_lib/core/usbd_def.h" path="usb_lib/core/usbd_def.h" type="1"/>
     <File name="usb_lib" path="" type="2"/>
@@ -135,8 +136,8 @@
     <File name="cmsis" path="" type="2"/>
     <File name="MachineControl.cpp" path="MachineControl.cpp" type="1"/>
     <File name="STM32F4-Discovery/stm32f4_discovery_audio_codec.h" path="STM32F4-Discovery/stm32f4_discovery_audio_codec.h" type="1"/>
-    <File name="cmsis_lib" path="" type="2"/>
     <File name="MotorControl.h" path="MotorControl.h" type="1"/>
+    <File name="cmsis_lib" path="" type="2"/>
     <File name="usb_lib/core/usbd_req.h" path="usb_lib/core/usbd_req.h" type="1"/>
     <File name="main.cpp" path="main.cpp" type="1"/>
     <File name="usb_lib/otg/usb_core.h" path="usb_lib/otg/usb_core.h" type="1"/>
@@ -175,6 +176,7 @@
     <File name="usb_lib/core/usbd_core.h" path="usb_lib/core/usbd_core.h" type="1"/>
     <File name="IOBoard.h" path="IOBoard.h" type="1"/>
     <File name="usb_lib/core/usbd_core.c" path="usb_lib/core/usbd_core.c" type="1"/>
+    <File name="generalFunctions.cpp" path="generalFunctions.cpp" type="1"/>
     <File name="usb_conf" path="" type="2"/>
     <File name="usb_lib/core/usbd_ioreq.c" path="usb_lib/core/usbd_ioreq.c" type="1"/>
     <File name="usb_lib/cdc/usbd_cdc_core.c" path="usb_lib/cdc/usbd_cdc_core.c" type="1"/>

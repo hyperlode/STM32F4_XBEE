@@ -15,11 +15,11 @@ void ApplicationController::init(uint32_t* millis){
 	waveShareIO.init(WAVESHARE_PORT);
 	waveShareIO.initLeds();
 
-	waveShareIO.setLed(0,true);
-	waveShareIO.setLed(1,true);
-	waveShareIO.setLed(2,true);
-	waveShareIO.setLedBlinkPeriodMillis(3,500);
-	waveShareIO.setLed(3,true);
+	//waveShareIO.setLed(0,true);LED_BAILTRANSDUCER
+	//waveShareIO.setLed(1,true);
+	//waveShareIO.setLed(2,true);
+	//waveShareIO.setLedBlinkPeriodMillis(3,500);
+//	waveShareIO.setLed(3,true);
 
 	//init radio
 	this->millis  = millis;
@@ -50,7 +50,13 @@ void ApplicationController::init(uint32_t* millis){
 
 	mainMenu.addItem("xbee send MESSAGE to destination", xbeeSendMessageToRemote, string);
 
+
+
 	mainMenu.addItem("toggle send cyclic message to destination each x ms (0 to disable).", sendCyclicMessage, integerPositive);
+
+	//specific for PTM
+	mainMenu.addItem("Define role BASE, BAIL or CROWD(from Xbee name)", ptmGetRoleFromXbeeName, none);
+
 }
 
 void ApplicationController::refresh(){
@@ -79,7 +85,7 @@ void ApplicationController::refresh(){
 	if(checkTestButtonPressed()){
 		printf("button 1 pressed \r\n");
 		command cmd;
-		cmd.id = xbeeSendMessageToRemote;
+		cmd.id = ptmGetRoleFromXbeeName;
 		cmd.argument_str = "button1";
 		executeCommand(cmd);
 	}
@@ -260,21 +266,21 @@ void ApplicationController::executeCommand(command command){
 		printf("xbee local address\r\n");
 		break;
 	case xbeeToggleSleep:
-		{
-			if (radio.isSleeping()){
-				radio.wakeUp();
-			}else{
-				radio.sleep();
-			}
-			break;
+	{
+		if (radio.isSleeping()){
+			radio.wakeUp();
+		}else{
+			radio.sleep();
 		}
+		break;
+	}
 
 	case xbeeGetRemotes:
-			{
-				radio.searchActiveRemoteXbees(5000);
-				radio.displayNeighbours();
-				break;
-			}
+	{
+		radio.searchActiveRemoteXbees(5000);
+		radio.displayNeighbours();
+		break;
+	}
 	case xbeeCustomAtCommandConvertArgToInt:
 	{
 /*
@@ -365,6 +371,28 @@ void ApplicationController::executeCommand(command command){
 
 		break;
 	}
+	case ptmGetRoleFromXbeeName:
+		if (!radio.sendAtCommandAndAwaitWithResponse(AT_NODE_IDENTIFIER_NI,100)){
+			printf("ASSERT ERROR: command fail.\r\n");
+		}
+
+		if (stringsAreEqual((char*)radio.senderXbee.name, "BAIL")){
+
+			//printf("got it %s \r\n",radio.senderXbee.name);
+			printf("Bail transducer");
+			this->ptmRole = bailTransducer;
+			waveShareIO.setLed(LED_BAILTRANSDUCER,true);
+		}else if (stringsAreEqual((char*)radio.senderXbee.name, "BASE")){
+			printf("Bail Base Station");
+			this->ptmRole = baseStation;
+			waveShareIO.setLed(LED_BASESTATION,true);
+		}else if (stringsAreEqual((char*)radio.senderXbee.name, "CROWD")){
+			printf("Crowd Transducer");
+			this->ptmRole = crowdTransducer;
+			waveShareIO.setLed(LED_CROWDTRANSDUCER,true);
+
+		}
+		break;
 
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
