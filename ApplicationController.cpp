@@ -55,7 +55,8 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("toggle send cyclic message to destination each x ms (0 to disable).", sendCyclicMessage, integerPositive);
 
 	//specific for PTM
-	mainMenu.addItem("Define role BASE, BAIL or CROWD(from Xbee name)", ptmGetRoleFromXbeeName, none);
+	mainMenu.addItem("PTM Define role BASE, BAIL or CROWD(from Xbee name)", ptmGetRoleFromXbeeName, none);
+	mainMenu.addItem("PTM get destination xbee ", setPtmDestination, none);
 
 }
 
@@ -88,6 +89,9 @@ void ApplicationController::refresh(){
 		cmd.id = ptmGetRoleFromXbeeName;
 		cmd.argument_str = "button1";
 		executeCommand(cmd);
+
+
+
 	}
 
 	//check keypress2
@@ -277,7 +281,7 @@ void ApplicationController::executeCommand(command command){
 
 	case xbeeGetRemotes:
 	{
-		radio.searchActiveRemoteXbees(5000);
+		radio.searchActiveRemoteXbees(8000);
 		radio.displayNeighbours();
 		break;
 	}
@@ -376,24 +380,33 @@ void ApplicationController::executeCommand(command command){
 			printf("ASSERT ERROR: command fail.\r\n");
 		}
 
-		if (stringsAreEqual((char*)radio.senderXbee.name, "BAIL")){
-
-			//printf("got it %s \r\n",radio.senderXbee.name);
+		//response of NI sets the local radio name
+		//the name defines the role of the board.
+		if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "BAIL")){
 			printf("Bail transducer");
 			this->ptmRole = bailTransducer;
 			waveShareIO.setLed(LED_BAILTRANSDUCER,true);
-		}else if (stringsAreEqual((char*)radio.senderXbee.name, "BASE")){
+		}else if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "BASE")){
 			printf("Bail Base Station");
 			this->ptmRole = baseStation;
 			waveShareIO.setLed(LED_BASESTATION,true);
-		}else if (stringsAreEqual((char*)radio.senderXbee.name, "CROWD")){
+		}else if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "CROWD")){
 			printf("Crowd Transducer");
 			this->ptmRole = crowdTransducer;
 			waveShareIO.setLed(LED_CROWDTRANSDUCER,true);
-
 		}
+
 		break;
 
+	case setPtmDestination:
+		{
+			if (!ptmSetDestination()){
+				printf("could not set destination \r\n");
+			}
+
+		}
+
+		break;
 	default:
 		printf("ASSERT ERROR: no valid command.....\r\n");
 		break;
@@ -422,6 +435,57 @@ void ApplicationController::excecuteCommand(command command){
 bool ApplicationController::isBusy(){
 	return isLocked;
 }
+
+bool ApplicationController::ptmSetDestination(){
+
+	if (!radio.searchActiveRemoteXbees(8000)){
+		printf("no neighbours found\r\n");
+		return false;
+	}
+
+
+	//set neighbour (search for the right one in the found neighbours list)
+	if (this->ptmRole == baseStation){
+		return ptmSetDestinationByRole(bailTransducer);
+
+
+	}else{
+		//if not a base station, search for it!
+		return ptmSetDestinationByRole( baseStation);
+
+	}
+}
+
+bool ApplicationController::ptmSetDestinationByRole(ptmRoles destinationToConnectWith){
+
+
+	char* deviceName;
+	if ( destinationToConnectWith = baseStation){
+		deviceName = "BASE";
+	}
+
+
+	int8_t index = radio.getNeighbourIndexByName(deviceName,false);
+
+	if (index<0){
+		printf(" %s not found.(or more than 2).. \r\n", deviceName);
+		return false;
+	}else if (radio.setNeighbourAsRemote(index)){
+		printf(" %sfound and connected, ready for sending.\r\n", deviceName);
+		//waveShareIO.setLedBlinkPeriodMillis(LED_BASESTATION,1000);
+	//	waveShareIO.setLed(LED_BASESTATION,true);
+		return true;
+
+	}else{
+		printf("neighbour not set. \r\n");
+		return false;
+	}
+
+
+}
+
+
+
 
 uint16_t ApplicationController::lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter){
 

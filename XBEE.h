@@ -7,11 +7,13 @@
 #include "misc.h"
 #include <stdio.h>
 
+#include "generalFunctions.h"
+
 #define FIRMWARE_802.15.4_TH
 
 
-//#define XBEE_PRINTF_DEBUG
-//#define XBEE_PRINTF_INFO
+#define XBEE_PRINTF_DEBUG
+#define XBEE_PRINTF_INFO
 #define XBEE_PRINTF_MINIMAL_INFO
 
 
@@ -172,6 +174,7 @@ public:
 	bool getDestinationAddressFromXbee();
 	bool saveChangesinLocalXbee();
 	bool searchActiveRemoteXbees(uint32_t timeout_millis);
+	int8_t getNeighbourIndexByName(char* name, bool getFirstOccurenceIfMultiple);
 	void displayNeighbours();
 	bool setNeighbourAsRemote(uint8_t numberInList);
 	void clearNeighbours();

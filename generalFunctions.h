@@ -5,7 +5,11 @@
 #include <stdint.h>
 #include <stdio.h>
 /**/
-bool stringsAreEqual(char* A, char*B);
+
+class generalFunctions{
+public:
+	static bool stringsAreEqual(char* A, char*B);
+};
 
 /**/
 #endif

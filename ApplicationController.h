@@ -40,7 +40,9 @@ enum commandIds {testInt,
 	xbeeSetDestination,
 	xbeeGetRemoteAddress,
 	xbeeSendMessageToRemote,
-	ptmGetRoleFromXbeeName
+	ptmGetRoleFromXbeeName,
+
+	setPtmDestination
 };
 
 
@@ -61,6 +63,12 @@ public:
 	void XbeeUartInterruptHandler(char c);
 
 	uint16_t lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter);
+
+
+
+	bool ptmSetDestinationByRole(ptmRoles destinationToConnectWith);
+	bool ptmSetDestination();
+
 
 	bool checkTestButtonPressed();
 	void initTestButton();

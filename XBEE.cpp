@@ -364,6 +364,38 @@ bool XBEE::saveChangesinLocalXbee(){
 	return true;
 }
 
+int8_t XBEE::getNeighbourIndexByName(char* name, bool getFirstOccurenceIfMultiple){
+	//index of match
+	//-1 if no match
+	//-2 if multiple matches (if firstOccurence is true, will return first item instead of -2).
+
+	int8_t matches = 0;
+	int8_t firstMatch;
+
+	for (uint8_t i = 0; i< BUFFER_NEIGHBOUR_XBEES_SIZE; i++){
+		//printf ("  %d: ", i);
+		if (neighbours[i].isValid){
+			if (generalFunctions::stringsAreEqual((char*)neighbours[i].name , name)){
+				if (matches == 0){
+					firstMatch=i;
+				}
+				matches++;
+			}
+		}
+	}
+
+	//set return
+	if (matches == 0){
+		return -1;
+	}else if (matches >1 && getFirstOccurenceIfMultiple){
+		return firstMatch;
+	}else if (matches == 1){
+		return firstMatch;
+	}else {
+		return -2;
+	}
+}
+
 void XBEE::displayNeighbours(){
 	if (this->numberOfNeighbours ==0){
 		printf("No neighbours \r\n");
@@ -748,19 +780,19 @@ void XBEE::processAtResponse(){
 			for (uint8_t i=0;i<8;i++){
 				neighbours[this->numberOfNeighbours].address[i] = atResponse.responseData[2+i];
 			}
-			uint8_t i = 15;
 
 			//record the name
 			bool charValid = true;
 			for (uint8_t i=0;i<XBEE_NAME_MAX_NUMBER_OF_CHARACTERS;i++){
-				if (atResponse.responseData[10 + i] == 0){
+				if (atResponse.responseData[11 + i] == 0){
 					charValid = false;
 				}
 
 				if (charValid){
-					neighbours[this->numberOfNeighbours].name[i] = atResponse.responseData[10 + i];
+					neighbours[this->numberOfNeighbours].name[i] = atResponse.responseData[11 + i];
 				}else{
-					neighbours[this->numberOfNeighbours].name[i] = 0x20; //space.
+					//neighbours[this->numberOfNeighbours].name[i] = 0x20; //space.
+					neighbours[this->numberOfNeighbours].name[i] = '/0'; //space.
 				}
 			}
 			neighbours[this->numberOfNeighbours].isValid = true;

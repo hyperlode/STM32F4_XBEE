@@ -1,6 +1,6 @@
 #include "generalFunctions.h"
 
-bool stringsAreEqual(char* A, char*B){
+bool generalFunctions::stringsAreEqual(char* A, char*B){
 	//check if two strings, char arrays terminated with a '/0' are equal
 
 
