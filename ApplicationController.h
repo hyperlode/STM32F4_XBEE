@@ -40,6 +40,7 @@ enum commandIds {testInt,
 	xbeeSetDestination,
 	xbeeGetRemoteAddress,
 	xbeeSendMessageToRemote,
+	xbeeSendMessageBroadcast,
 	ptmGetRoleFromXbeeName,
 
 	setPtmDestination

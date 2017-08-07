@@ -341,6 +341,7 @@ void ColorfulRingOfDeath(void){
 
 void SysTick_Handler(void)
 {
+	//update button press(not button handling!) and leds regularly
 	xbeePeerToPeerDemo.interruptRefresh();
 	ticker++;
 	if (downTicker > 0)

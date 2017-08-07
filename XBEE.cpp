@@ -166,18 +166,11 @@ bool XBEE::isSleeping(){
 //send data to destination xbee
 //------------------------------------------------------------------
 
-bool XBEE::sendMessageToDestinationAwaitResponse(char* message, uint16_t messageLength, uint32_t timeout_millis){
-	//printf("messg length : %d , \r\n", messageLength);
-	if (!sendMessageToDestination(message, messageLength,true,timeout_millis)){
-		return false;
-	}else{
-		return true;
-	}
-}
 
 
 
-void XBEE::generateFrameType0x00(frameData* frameData,char* message, uint16_t messageLength, uint8_t id){
+
+void XBEE::generateFrameType0x00(frameData* frameData,char* message, uint16_t messageLength, uint8_t id, uint8_t* destinationAddress){
 	//https://www.digi.com/resources/documentation/digidocs/pdfs/90001500.pdf  p117
 	(*frameData).length = 11 + messageLength;
 
@@ -186,7 +179,7 @@ void XBEE::generateFrameType0x00(frameData* frameData,char* message, uint16_t me
 
 	//destination address
 	for (uint8_t i=0;i<8;i++){
-		frameData->data[2 + i] = destinationXbee.address[i];
+		frameData->data[2 + i] = destinationAddress[i] ;//destinationXbee.address[i];
 		//printf("b: %02x",destinationXbee.address[i]);
 	}
 
@@ -198,7 +191,7 @@ void XBEE::generateFrameType0x00(frameData* frameData,char* message, uint16_t me
 	}
 }
 
-void XBEE::generateFrameType0x10(frameData* frameData,char* message, uint16_t messageLength, uint8_t id){
+void XBEE::generateFrameType0x10(frameData* frameData,char* message, uint16_t messageLength, uint8_t id, uint8_t* destinationAddress){
 
 	frameData->length = 14 + messageLength;
 
@@ -207,7 +200,7 @@ void XBEE::generateFrameType0x10(frameData* frameData,char* message, uint16_t me
 
 	//destination address
 	for (uint8_t i=0;i<8;i++){
-		frameData->data[2 + i] = destinationXbee.address[i];
+		frameData->data[2 + i] = destinationAddress[i];
 	}
 
 	frameData->data[10] = 0xFF; // 16 bit dest address->
@@ -222,10 +215,31 @@ void XBEE::generateFrameType0x10(frameData* frameData,char* message, uint16_t me
 	}
 }
 
-
-
+/*
+bool XBEE::sendMessageAwaitResponse(char* message, uint8_t* address, uint16_t messageLength, uint32_t timeout_millis){
+	//printf("messg length : %d , \r\n", messageLength);
+	if (!sendMessage(message, address, messageLength,true,timeout_millis)){
+		return false;
+	}else{
+		return true;
+	}
+}
+*/
 
 bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
+
+	return sendMessage(message, destinationXbee.address, messageLength, awaitResponse, timeout_millis);
+
+}
+
+bool XBEE::sendMessageBroadcast(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
+
+	//uint8_t broadcastAddress [8] = {0,0,0,0,0,0, 0xFF, 0xFF};
+	//return sendMessage(message, broadcastAddress, messageLength, awaitResponse, timeout_millis);
+	return sendMessage(message, destinationXbee.address, messageLength, awaitResponse, timeout_millis);
+}
+
+bool XBEE::sendMessage(char* message, uint8_t* address, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
 
 
 	if (!destinationXbee.isValid){
@@ -241,7 +255,7 @@ bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool 
 
 
 #ifdef FIRMWARE_802.15.4_TH
-	generateFrameType0x00(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse));
+	generateFrameType0x00(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse), address);
 #else
 	//frame type: 0X10 transmit request
 	generateFrameType0x10(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse));

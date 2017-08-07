@@ -57,6 +57,7 @@ void ApplicationController::init(uint32_t* millis){
 	//specific for PTM
 	mainMenu.addItem("PTM Define role BASE, BAIL or CROWD(from Xbee name)", ptmGetRoleFromXbeeName, none);
 	mainMenu.addItem("PTM get destination xbee ", setPtmDestination, none);
+	mainMenu.addItem("xbee send broadcast message ", xbeeSendMessageBroadcast, string);
 
 }
 
@@ -361,9 +362,18 @@ void ApplicationController::executeCommand(command command){
 	case xbeeSendMessageToRemote:
 	{
 		uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE, false);
-		radio.sendMessageToDestinationAwaitResponse(command.argument_str,len,200);
+		radio.sendMessageToDestination(command.argument_str,len,true,200);
 		break;
 	}
+/*
+	case xbeeSendMessageBroadcast:
+		{
+			uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE, false);
+			radio.sendMessageBroadcast(command.argument_str,len,true,200);
+			break;
+		}
+
+*/
 	case xbeeReset:
 		radio.reset();
 		break;
