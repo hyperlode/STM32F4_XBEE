@@ -1,7 +1,7 @@
 #ifndef MENU_H
 #define MENU_H
 
-#define NUMBER_OF_ITEMS_MAX 16
+#define NUMBER_OF_ITEMS_MAX 100
 #define MENU_ITEM_TEXT_MAX 64
 #define MENU_OVERHEAD_TEXT_MAX 100
 

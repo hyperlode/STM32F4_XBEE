@@ -215,44 +215,26 @@ void XBEE::generateFrameType0x10(frameData* frameData,char* message, uint16_t me
 	}
 }
 
-/*
-bool XBEE::sendMessageAwaitResponse(char* message, uint8_t* address, uint16_t messageLength, uint32_t timeout_millis){
-	//printf("messg length : %d , \r\n", messageLength);
-	if (!sendMessage(message, address, messageLength,true,timeout_millis)){
-		return false;
-	}else{
-		return true;
-	}
-}
-*/
-
 bool XBEE::sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
-
-	return sendMessage(message, destinationXbee.address, messageLength, awaitResponse, timeout_millis);
-
-}
-
-bool XBEE::sendMessageBroadcast(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
-
-	//uint8_t broadcastAddress [8] = {0,0,0,0,0,0, 0xFF, 0xFF};
-	//return sendMessage(message, broadcastAddress, messageLength, awaitResponse, timeout_millis);
-	return sendMessage(message, destinationXbee.address, messageLength, awaitResponse, timeout_millis);
-}
-
-bool XBEE::sendMessage(char* message, uint8_t* address, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
-
-
 	if (!destinationXbee.isValid){
 		printf("error: destination not configured, will try to retrieve destination from local xbee\r\n");
 		if (!getDestinationAddressFromXbee()){
 			return false;
 		}
 	}
+	return sendMessage(message, destinationXbee.address, messageLength, awaitResponse, timeout_millis);
+}
+
+bool XBEE::sendMessageBroadcast(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
+
+	uint8_t broadcastAddress [8] = {0,0,0,0,0,0, 0xFF, 0xFF};
+	return sendMessage(message, broadcastAddress, messageLength, awaitResponse, timeout_millis);
+}
+
+bool XBEE::sendMessage(char* message, uint8_t* address, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis){
+
 	uint32_t start_millis = *this->millis;
-
-
 	frameData frameData;
-
 
 #ifdef FIRMWARE_802.15.4_TH
 	generateFrameType0x00(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse), address);
@@ -260,7 +242,6 @@ bool XBEE::sendMessage(char* message, uint8_t* address, uint16_t messageLength, 
 	//frame type: 0X10 transmit request
 	generateFrameType0x10(&frameData,message,messageLength,getNextIdForSendFrame(awaitResponse));
 #endif
-
 
 	//send the frame
 	if (!buildAndSendFrame(&frameData)){
@@ -273,11 +254,9 @@ bool XBEE::sendMessage(char* message, uint8_t* address, uint16_t messageLength, 
 	}else{
 		return true; //sending message success. no feedback requested.
 	}
-
-
-
 }
 
+\
 
 void XBEE::processTransmitStatus(){
 	if (transmitResponse.status == 0x00){

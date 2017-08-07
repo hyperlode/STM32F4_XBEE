@@ -168,13 +168,8 @@ public:
 	void generateFrameType0x10(frameData* frameData,char* message, uint16_t messageLength, uint8_t id, uint8_t* destinationAddress);
 
 	bool sendMessageToDestination(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis);
-	bool sendMessageAwaitResponse(char* message, uint8_t* address, uint16_t messageLength, uint32_t timeout_millis);
-
 	bool sendMessageBroadcast(char* message, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis);
 	bool sendMessage(char* message, uint8_t* address, uint16_t messageLength, bool awaitResponse, uint32_t timeout_millis);
-
-
-
 
 	bool getLocalXbeeAddress(uint32_t timeout_millis);
 	bool getDestinationAddressFromXbee();

@@ -142,6 +142,8 @@ uint8_t Menu::getMenuLineNumberOfCommand(command cmd){
 
 
 void Menu::userInput(char* input){
+
+
 	if(commandSelectedAndWaitingForRelease){
 		if (input[0] == 'd' ){
 			releaseMenu();
@@ -156,6 +158,7 @@ void Menu::userInput(char* input){
 		if (input[0] == 'm' ){
 			//if character m
 			display();
+
 			return;
 		}
 
@@ -227,6 +230,8 @@ void Menu::userInput(char* input){
 		}
 
 	}
+
+
 
 }
 

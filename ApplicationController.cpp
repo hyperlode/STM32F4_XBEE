@@ -365,7 +365,7 @@ void ApplicationController::executeCommand(command command){
 		radio.sendMessageToDestination(command.argument_str,len,true,200);
 		break;
 	}
-/*
+
 	case xbeeSendMessageBroadcast:
 		{
 			uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE, false);
@@ -373,7 +373,7 @@ void ApplicationController::executeCommand(command command){
 			break;
 		}
 
-*/
+
 	case xbeeReset:
 		radio.reset();
 		break;
