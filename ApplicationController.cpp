@@ -60,9 +60,15 @@ void ApplicationController::init(uint32_t* millis){
 
 }
 
+
+
+void ApplicationController::interruptRefresh(){
+	waveShareIO.refresh(*millis);
+
+}
 void ApplicationController::refresh(){
 
-	waveShareIO.refresh(*millis);
+
 
 	if (mainMenu.commandWaitingToBeExecuted()){
 		command cmd;
@@ -71,15 +77,11 @@ void ApplicationController::refresh(){
 		mainMenu.releaseMenu();
 	}
 
-
 	//auto processing:
 	radio.processReceivedFrame();
 	if (cyclicMessageEnabled && *this->millis > lastSentCyclicMessage_ms + cyclicMessagePeriod_ms){
-
 		radio.sendMessageToDestination("Heyhoo",6,false,cyclicMessagePeriod_ms);
-
 		lastSentCyclicMessage_ms = *this->millis;
-
 	}
 
 	//check keypress
@@ -90,7 +92,7 @@ void ApplicationController::refresh(){
 		cmd.argument_str = "button1";
 		executeCommand(cmd);
 
-
+		ptmSetDestination();
 
 	}
 
@@ -382,6 +384,12 @@ void ApplicationController::executeCommand(command command){
 
 		//response of NI sets the local radio name
 		//the name defines the role of the board.
+		for (uint8_t i = 0;i<4;i++){
+			waveShareIO.setLed(i,false);
+			waveShareIO.setLedBlinkPeriodMillis(i,0);
+		}
+
+
 		if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "BAIL")){
 			printf("Bail transducer");
 			this->ptmRole = bailTransducer;
@@ -394,6 +402,9 @@ void ApplicationController::executeCommand(command command){
 			printf("Crowd Transducer");
 			this->ptmRole = crowdTransducer;
 			waveShareIO.setLed(LED_CROWDTRANSDUCER,true);
+		}else{
+			printf("Name is not a valid PTM device: %s" ,radio.senderXbee.name );
+
 		}
 
 		break;
@@ -446,11 +457,22 @@ bool ApplicationController::ptmSetDestination(){
 
 	//set neighbour (search for the right one in the found neighbours list)
 	if (this->ptmRole == baseStation){
-		return ptmSetDestinationByRole(bailTransducer);
+		bool success = true;
+		if (!ptmSetDestinationByRole(bailTransducer)){
+			printf("no bail transducer found. \r\n");
+			success = false;
+		}
+		if (!ptmSetDestinationByRole(crowdTransducer)){
+			printf("no crowd Transducer found. \r\n");
+			success = false;
+		}
 
+		return success;
 
 	}else{
 		//if not a base station, search for it!
+		//radio.displayNeighbours();
+		//printf("ahehuueuue\r\n");
 		return ptmSetDestinationByRole( baseStation);
 
 	}
@@ -460,8 +482,15 @@ bool ApplicationController::ptmSetDestinationByRole(ptmRoles destinationToConnec
 
 
 	char* deviceName;
-	if ( destinationToConnectWith = baseStation){
+	if ( destinationToConnectWith == baseStation){
 		deviceName = "BASE";
+	}else if ( destinationToConnectWith == bailTransducer){
+		deviceName = "BAIL";
+	}else if ( destinationToConnectWith == crowdTransducer){
+		deviceName = "CROWD";
+	}else  {
+		printf("ASSERT ERROR: destination device name.");
+
 	}
 
 
@@ -472,8 +501,25 @@ bool ApplicationController::ptmSetDestinationByRole(ptmRoles destinationToConnec
 		return false;
 	}else if (radio.setNeighbourAsRemote(index)){
 		printf(" %sfound and connected, ready for sending.\r\n", deviceName);
-		//waveShareIO.setLedBlinkPeriodMillis(LED_BASESTATION,1000);
-	//	waveShareIO.setLed(LED_BASESTATION,true);
+
+		switch (destinationToConnectWith){
+		case baseStation:
+			waveShareIO.setLedBlinkPeriodMillis(LED_BASESTATION,1000);
+			waveShareIO.setLed(LED_BASESTATION,true);
+			break;
+		case bailTransducer:
+			waveShareIO.setLedBlinkPeriodMillis(LED_BAILTRANSDUCER,1000);
+			waveShareIO.setLed(LED_BAILTRANSDUCER,true);
+			break;
+		case crowdTransducer:
+			waveShareIO.setLedBlinkPeriodMillis(LED_CROWDTRANSDUCER,1000);
+			waveShareIO.setLed(LED_CROWDTRANSDUCER,true);
+			break;
+		default:
+			break;
+
+		}
+
 		return true;
 
 	}else{

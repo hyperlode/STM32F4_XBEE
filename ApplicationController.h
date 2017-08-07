@@ -52,6 +52,7 @@ public:
 	ApplicationController();
 	void init(uint32_t* millis);
 	void refresh();
+	void interruptRefresh();
 	void excecuteCommand(command command);
 	bool isBusy();
 

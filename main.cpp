@@ -304,8 +304,8 @@ void init()
 	//Setup SysTick or CROD!
 	if (SysTick_Config(SystemCoreClock / 1000))
 	{
-		ColorfulRingOfDeath();
-}
+			ColorfulRingOfDeath();
+	}
 
 #ifdef USE_VCP
 	// Setup USB
@@ -326,7 +326,7 @@ void init()
 
 void ColorfulRingOfDeath(void){
 	STM_EVAL_LEDOn(LED6);
-	printf("Board generated an internal error. Please restart.");
+	printf("Board generated an internal error. Please restart.\r\n");
 	//while (1)
 	//{
 	//	//get stuck here forever.
@@ -341,6 +341,7 @@ void ColorfulRingOfDeath(void){
 
 void SysTick_Handler(void)
 {
+	xbeePeerToPeerDemo.interruptRefresh();
 	ticker++;
 	if (downTicker > 0)
 	{

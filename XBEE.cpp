@@ -347,6 +347,14 @@ bool XBEE::setNeighbourAsRemote(uint8_t numberInList){
 	}
 	if (!saveChangesinLocalXbee())return false;
 
+	//re read the values to set the address locally.
+	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_HIGH_DH, 500 )){
+		return false;
+	}
+	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_LOW_DL, 500 )){
+		return false;
+	}
+
 	printf("Remote set.\r\n");
 
 	return true;
@@ -374,8 +382,11 @@ int8_t XBEE::getNeighbourIndexByName(char* name, bool getFirstOccurenceIfMultipl
 
 	for (uint8_t i = 0; i< BUFFER_NEIGHBOUR_XBEES_SIZE; i++){
 		//printf ("  %d: ", i);
+		printf("niegh: %s , %s", (char*)neighbours[i].name, name);
 		if (neighbours[i].isValid){
 			if (generalFunctions::stringsAreEqual((char*)neighbours[i].name , name)){
+
+
 				if (matches == 0){
 					firstMatch=i;
 				}
@@ -783,8 +794,11 @@ void XBEE::processAtResponse(){
 
 			//record the name
 			bool charValid = true;
+
+
 			for (uint8_t i=0;i<XBEE_NAME_MAX_NUMBER_OF_CHARACTERS;i++){
-				if (atResponse.responseData[11 + i] == 0){
+				//printf("lode testfee: %02x \r\n", atResponse.responseData[12 + i]);
+				if (atResponse.responseData[11 + i] == 0x00){
 					charValid = false;
 				}
 
@@ -792,7 +806,7 @@ void XBEE::processAtResponse(){
 					neighbours[this->numberOfNeighbours].name[i] = atResponse.responseData[11 + i];
 				}else{
 					//neighbours[this->numberOfNeighbours].name[i] = 0x20; //space.
-					neighbours[this->numberOfNeighbours].name[i] = '/0'; //space.
+					neighbours[this->numberOfNeighbours].name[i] = 0x00; //space.
 				}
 			}
 			neighbours[this->numberOfNeighbours].isValid = true;
