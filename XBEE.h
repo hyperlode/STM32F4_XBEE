@@ -56,6 +56,8 @@
 
 //xbee frame types
 #define XBEE_FRAME_TYPE_RECEIVE_PACKET 0x90
+#define XBEE_FRAME_TYPE_RX_RECEIVE_PACKET 0x80
+
 
 #define XBEE_FRAME_TYPE_AT_COMMAND 0x08
 #define XBEE_FRAME_TYPE_AT_COMMAND_RESPONSE 0x88
@@ -100,7 +102,7 @@ struct transmitStatusFrame{
 };
 
 struct atCommandResponseFrameData{
-	//same struct used for command and command response.
+	//receiving an at command response
 	uint16_t atCommand = INVALID_AT_COMMAND;
 	uint8_t responseData [AT_DATA_SIZE];
 	uint16_t responseDataLength = 0;
@@ -110,12 +112,24 @@ struct atCommandResponseFrameData{
 
 
 struct atFrameData{
-	//same struct used for command and command response.
-	//bool isResponse;
+	//for sending an at command
 	uint16_t atCommand = INVALID_AT_COMMAND;
 	uint8_t data [AT_DATA_SIZE];
 	uint16_t dataLength = 0;
 	uint8_t id = 0;
+};
+
+struct rxFrameData{
+	//https://www.digi.com/resources/documentation/digidocs/pdfs/90001500.pdf p121
+	//receive rx data
+	//uint16_t atCommand = INVALID_AT_COMMAND;
+	uint8_t sourceAddress[8];
+	uint8_t RSSI ;//received strength indicator
+	uint8_t options; //0x01 = address broadcast (unicast) , //0x02 PAN broadcast (broadcast)
+
+	uint8_t data [AT_DATA_SIZE];
+	uint16_t dataLength = 0;
+	//uint8_t id = 0;
 	//uint8_t status = 0;
 };
 
@@ -200,12 +214,14 @@ public:
 	void displayAtFrameData(atFrameData* atFrame);
 	
 	//receive frame
+	rxFrameData* getRxPackage();
+
 	void receiveFrame(char receivedByte);
 	void displayTopFrameInReceivedFifoBuffer(frameReceive* package);
 	uint8_t parseFrame(frameReceive* package);
 
 	void receiveInterruptHandler(char c);
-	void processReceivedFrame();
+	bool processReceivedFrame();
 
 	bool frameAvailableInFifoBuffer();
 	void deleteTopFrameInReceivedFifoBuffer();
@@ -257,6 +273,7 @@ private:
 	uint8_t numberOfNeighbours =0;
 	frame frameToSend;
 
+	rxFrameData rxData;
 	atCommandResponseFrameData	atResponse;
 	transmitStatusFrame transmitResponse;
 	uint32_t* millis;

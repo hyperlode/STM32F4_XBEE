@@ -62,6 +62,8 @@ public:
 	void serialInput(char* input);
 	void executeCommand(command command);
 
+	void interPretReceivedMessage();
+
 	void XbeeUartInterruptHandler(char c);
 
 	uint16_t lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter);
@@ -91,6 +93,7 @@ private:
 	XBEE radio;
 	XBEE* pRadio;
 
+	bool receivedPackageNotYetAnalysed = false;
 
 	IOBoard waveShareIO;
 	//uint8_t destinationAddress [] = {0x00, 0x13, 0xA2, 0x00, 0x41, 0x05, 0xBC, 0x87};

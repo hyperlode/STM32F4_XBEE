@@ -1055,12 +1055,17 @@ void XBEE::sendByte(uint8_t byteToSend){
 //  XBEE receive
 // ------------------------------------------------------------
 
-void XBEE::processReceivedFrame(){
+bool XBEE::processReceivedFrame(){
 	//check if first element in the list of packages to be processed is a buffer number that needs to be processed.
+
+	//return true if usefull (non administration) data for higher level application. info stored in
+
+	bool rxDataAvailableForHighLevelProcessing = false;
+
 	if (!frameAvailableInFifoBuffer()){
 		//nothing to process.
 		//printf("nothing here");
-		return;
+		return rxDataAvailableForHighLevelProcessing;
 	}
 
 	frameReceive* fifoTopFrame = getTopFrameInReceivedFifoBuffer();
@@ -1097,6 +1102,9 @@ void XBEE::processReceivedFrame(){
 		}
 	}else if( frameType == XBEE_FRAME_TYPE_MODEM_STATUS){
 			processModemStatus(fifoTopFrame);
+	}else if (frameType == XBEE_FRAME_TYPE_RX_RECEIVE_PACKET){
+			//rx packet received.
+			rxDataAvailableForHighLevelProcessing = true;
 	}else{
 		printf("frame is not a response %d, %d, %d \r\n", atResponse.id ,idOfFrameWaitingForResponse,senderXbeeLockedWaitingForResponse);
 	}
@@ -1105,9 +1113,15 @@ void XBEE::processReceivedFrame(){
 #ifdef XBEE_PRINTF_DEBUG
 	printf("finished processing top frame.");
 #endif
-
+	return rxDataAvailableForHighLevelProcessing;
 }
 
+
+rxFrameData* XBEE::getRxPackage(){
+	///rxDataaa = &this->rxData;
+	//printf("test: %d",rxDataaa->RSSI);
+	return &this->rxData;
+}
 
 bool XBEE::frameAvailableInFifoBuffer(){
 	int16_t bufferToProcess =  NOTHING_TO_BE_PROCESSED;
@@ -1175,7 +1189,25 @@ uint8_t XBEE::parseFrame (frameReceive* frame){
 		//transmit status
 		transmitResponse.id =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
 		transmitResponse.status =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 2];
+	}else if (frameType == XBEE_FRAME_TYPE_RX_RECEIVE_PACKET){
+		//received package https://www.digi.com/resources/documentation/digidocs/pdfs/90001500.pdf p121
+		for (uint8_t i = 0; i< 8; i++){
+			rxData.sourceAddress[i] = frame->frame[4 + i];
+			//printf("_%02x",rxData.sourceAddress[i]);
+		}
+		//printf("xx\r\n");
+		rxData.RSSI = frame->frame[12];
+		//printf("xx%d\r\n",rxData.RSSI);
+		rxData.options = frame->frame[13];
+		rxData.dataLength = frame->lengthFrameData - 11;
+		//printf("len: %d",rxData.dataLength);
+		for (uint8_t i = 0; i< rxData.dataLength; i++){
+			rxData.data[i] = frame->frame[14 + i];
+			//printf("_%02x",rxData.data[i]);
+		}
+		//printf("xx\r\n");
 	}
+
 
 	return frameType;
 }

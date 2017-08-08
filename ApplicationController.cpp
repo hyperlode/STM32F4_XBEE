@@ -4,6 +4,7 @@
 ApplicationController::ApplicationController(){
 
 }
+
 void ApplicationController::init(uint32_t* millis){
 
 	//
@@ -79,7 +80,26 @@ void ApplicationController::refresh(){
 	}
 
 	//auto processing:
-	radio.processReceivedFrame();
+	if (!receivedPackageNotYetAnalysed){
+		//check and process for new received data
+		this-> receivedPackageNotYetAnalysed = radio.processReceivedFrame();
+
+	}else{
+		//analyse received data
+		rxFrameData* test;
+		test = radio.getRxPackage();
+
+		printf("signal strength: %d\r\n", (*test).RSSI);
+		printf("last byte address: %02x\r\n", test->sourceAddress[7]);
+		receivedPackageNotYetAnalysed = false;
+
+
+
+	}
+
+
+
+	//cyclic message sender
 	if (cyclicMessageEnabled && *this->millis > lastSentCyclicMessage_ms + cyclicMessagePeriod_ms){
 		radio.sendMessageToDestination("Heyhoo",6,false,cyclicMessagePeriod_ms);
 		lastSentCyclicMessage_ms = *this->millis;
