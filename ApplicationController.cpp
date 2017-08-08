@@ -60,18 +60,69 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("PTM get destination xbee ", setPtmDestination, none);
 	mainMenu.addItem("xbee send broadcast message ", xbeeSendMessageBroadcast, string);
 
+	ptmInit();
+
 }
 
+void ApplicationController::ptmInit(){
+	printf("init ptm: \r\n");
+	command cmd;
+	cmd.id = ptmGetRoleFromXbeeName;
+	executeCommand(cmd);
 
+}
 
 void ApplicationController::interruptRefresh(){
 	waveShareIO.refresh(*millis);
 
 }
+
+void ApplicationController::processReceivedPackage(){
+	//analyse received data
+	rxFrameData* rxData;
+	rxData = radio.getRxPackage();
+
+	printf("signal strength: %d\r\n", (*rxData).RSSI);
+	printf("status (0- 1:unicast, 2: broadcast): %d\r\n", (*rxData).options);
+	//printf("last byte address: %02x\r\n", rxData->sourceAddress[7]);
+	receivedPackageNotYetAnalysed = false;
+
+	//if not yet found, look for signals
+	//ptmRemotesOk
+
+
+	if ((*rxData).options == 2){
+		//if broadcast, that means: init!
+		bool baseStationCalling;
+		baseStationCalling = generalFunctions::stringsAreEqual((char*)rxData->data, "BASE",4 );
+
+		if (baseStationCalling){
+			printf("Broadcast from base station received\r\n");
+			if (ptmRole != baseStation){
+
+				ptmSetDestination(baseStation, rxData->sourceAddress);
+			}else{
+				printf("This device IS a base station, neglect call from another base station...\r\n");
+			}
+		}else{
+			printf("Non base station broadcasting...(msg neglected)\r\n");
+		}
+	}else{
+		//specific message.
+		printf("msg received (and neglected)\r\n");
+	}
+}
+
 void ApplicationController::refresh(){
 
+	//init ptm wait for xbee to start up.
+	if (*this->millis > BOOT_TIME_XBEE_MILLIS && !xbeeBooted){
+		xbeeBooted = true;
+		ptmInit();
 
+	}
 
+	//execute command
 	if (mainMenu.commandWaitingToBeExecuted()){
 		command cmd;
 		cmd = mainMenu.getPreparedCommand();
@@ -79,27 +130,16 @@ void ApplicationController::refresh(){
 		mainMenu.releaseMenu();
 	}
 
-	//auto processing:
+	//auto processing received packages xbee
 	if (!receivedPackageNotYetAnalysed){
 		//check and process for new received data
 		this-> receivedPackageNotYetAnalysed = radio.processReceivedFrame();
-
 	}else{
-		//analyse received data
-		rxFrameData* test;
-		test = radio.getRxPackage();
 
-		printf("signal strength: %d\r\n", (*test).RSSI);
-		printf("last byte address: %02x\r\n", test->sourceAddress[7]);
-		receivedPackageNotYetAnalysed = false;
-
-
-
+		processReceivedPackage();
 	}
 
-
-
-	//cyclic message sender
+	//cyclic message sender xbee
 	if (cyclicMessageEnabled && *this->millis > lastSentCyclicMessage_ms + cyclicMessagePeriod_ms){
 		radio.sendMessageToDestination("Heyhoo",6,false,cyclicMessagePeriod_ms);
 		lastSentCyclicMessage_ms = *this->millis;
@@ -109,11 +149,12 @@ void ApplicationController::refresh(){
 	if(checkTestButtonPressed()){
 		printf("button 1 pressed \r\n");
 		command cmd;
+
 		cmd.id = ptmGetRoleFromXbeeName;
-		cmd.argument_str = "button1";
 		executeCommand(cmd);
 
-		ptmSetDestination();
+		cmd.id = setPtmDestination;
+		executeCommand(cmd);
 
 	}
 
@@ -441,9 +482,10 @@ void ApplicationController::executeCommand(command command){
 
 	case setPtmDestination:
 		{
-			if (!ptmSetDestination()){
+			//check for ptm destination. This is not a very nice way of working, better is to not send anything. Only wake up, and listen. This in order to conserve power.
+			//if (!ptmSetDestination()){
 				printf("could not set destination \r\n");
-			}
+			//}
 
 		}
 
@@ -477,6 +519,7 @@ bool ApplicationController::isBusy(){
 	return isLocked;
 }
 
+/*
 bool ApplicationController::ptmSetDestination(){
 
 	if (!radio.searchActiveRemoteXbees(8000)){
@@ -501,12 +544,42 @@ bool ApplicationController::ptmSetDestination(){
 
 	}else{
 		//if not a base station, search for it!
-		//radio.displayNeighbours();
-		//printf("ahehuueuue\r\n");
 		return ptmSetDestinationByRole( baseStation);
 
 	}
 }
+*/
+
+bool ApplicationController::ptmSetDestination(ptmRoles destinationToConnectWith, uint8_t* address){
+
+	switch (destinationToConnectWith){
+		case baseStation:
+
+			remoteBaseStationData.isValid = true;
+			generalFunctions::copyByteArray(address,remoteBaseStationData.address,  8);
+			//for (uint8_t i = 0; i<8;i++){
+			//	printf("last byte address: %02x\r\n", remoteBaseStationData.address[i]);
+			//	//printf("last byte address: %02x\r\n", address[i]);
+			//}
+			ptmRemotesOk  = true;
+			waveShareIO.setLedBlinkPeriodMillis(LED_BASESTATION,1000);
+			waveShareIO.setLed(LED_BASESTATION,true);
+			break;
+		case bailTransducer:
+			waveShareIO.setLedBlinkPeriodMillis(LED_BAILTRANSDUCER,1000);
+			waveShareIO.setLed(LED_BAILTRANSDUCER,true);
+			break;
+		case crowdTransducer:
+			waveShareIO.setLedBlinkPeriodMillis(LED_CROWDTRANSDUCER,1000);
+			waveShareIO.setLed(LED_CROWDTRANSDUCER,true);
+			break;
+		default:
+			break;
+
+	}
+	return ptmRemotesOk;
+
+}/*
 
 bool ApplicationController::ptmSetDestinationByRole(ptmRoles destinationToConnectWith){
 
@@ -525,6 +598,7 @@ bool ApplicationController::ptmSetDestinationByRole(ptmRoles destinationToConnec
 
 
 	int8_t index = radio.getNeighbourIndexByName(deviceName,false);
+
 
 	if (index<0){
 		printf(" %s not found.(or more than 2).. \r\n", deviceName);
@@ -560,7 +634,7 @@ bool ApplicationController::ptmSetDestinationByRole(ptmRoles destinationToConnec
 
 }
 
-
+*/
 
 
 uint16_t ApplicationController::lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter){

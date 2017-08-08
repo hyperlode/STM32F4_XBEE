@@ -17,6 +17,8 @@
 #define LED_BAILTRANSDUCER 1
 #define LED_CROWDTRANSDUCER 2
 
+#define BOOT_TIME_XBEE_MILLIS 1000
+
 enum ptmRoles {
 	baseStation,
 	bailTransducer,
@@ -62,16 +64,17 @@ public:
 	void serialInput(char* input);
 	void executeCommand(command command);
 
-	void interPretReceivedMessage();
+
+	void processReceivedPackage();
 
 	void XbeeUartInterruptHandler(char c);
 
 	uint16_t lengthOfString(char* string, uint16_t maxLength, bool includeStringDelimiter);
 
-
-
-	bool ptmSetDestinationByRole(ptmRoles destinationToConnectWith);
-	bool ptmSetDestination();
+	void ptmInit();
+	bool ptmSetDestination(ptmRoles destinationToConnectWith, uint8_t* address);
+	//bool ptmSetDestinationByRole(ptmRoles destinationToConnectWith);
+	//bool ptmSetDestination();
 
 
 	bool checkTestButtonPressed();
@@ -93,6 +96,10 @@ private:
 	XBEE radio;
 	XBEE* pRadio;
 
+	xbeeRadio remoteBaseStationData;
+	xbeeRadio remoteCrowdTransducerData;
+	xbeeRadio remoteBailTransducerData;
+	bool xbeeBooted = false;
 	bool receivedPackageNotYetAnalysed = false;
 
 	IOBoard waveShareIO;
@@ -112,6 +119,7 @@ private:
 	uint32_t testButton3StartPress;
 
 	ptmRoles ptmRole;
+	bool ptmRemotesOk = false;
 
 
 };

@@ -22,3 +22,33 @@ bool generalFunctions::stringsAreEqual(char* A, char*B){
 	}
 	return false;
 }
+
+
+bool generalFunctions::stringsAreEqual(char* A, char*B,uint16_t length){
+	//check if two string are equal for the defined length
+	bool equal = true;
+	for (uint16_t i = 0; i<length;i++){
+		if (A[i] != B[i]){
+			equal = false;
+		}
+	}
+	return equal;
+}
+
+bool generalFunctions::byteArraysAreEqual(uint8_t* A, uint8_t *B,uint16_t length){
+	//check if two string are equal for the defined length
+	bool equal = true;
+	for (uint16_t i = 0; i<length;i++){
+		if (A[i] != B[i]){
+			equal = false;
+		}
+	}
+	return equal;
+}
+
+void generalFunctions::copyByteArray(uint8_t* original, uint8_t* copy,uint16_t length){
+	//check if two string are equal for the defined length
+	for (uint16_t i = 0; i<length;i++){
+		copy[i] = original[i];
+	}
+}
