@@ -324,6 +324,9 @@ void XBEE::clearNeighbours(){
 
 }
 bool XBEE::setNeighbourAsRemote(uint8_t numberInList){
+
+
+
 	if (neighbours[numberInList].isValid){
 		destinationXbee = neighbours[numberInList];
 		//printf("millis at start: %d\r\n", *this->millis);
@@ -331,6 +334,14 @@ bool XBEE::setNeighbourAsRemote(uint8_t numberInList){
 		printf("invalid neighbour\r\n");
 		return false;
 	}
+	setDestinationAddressInLocalXbee( neighbours[numberInList].address);
+}
+
+bool XBEE::setDestinationAddressInLocalXbee(uint8_t* address){
+
+	destinationXbee.isValid = true;
+	generalFunctions::copyByteArray(address, destinationXbee.address, 8);
+
 
 	if (!sendAtCommandAndAwaitWithResponse(AT_MAC_DESTINATION_HIGH_DH, &destinationXbee.address[0], 4, 500 )){
 		return false;

@@ -45,7 +45,8 @@ enum commandIds {testInt,
 	xbeeSendMessageBroadcast,
 	ptmGetRoleFromXbeeName,
 
-	setPtmDestination
+	setPtmDestination,
+	xbeeSendMessageToBaseStation
 };
 
 

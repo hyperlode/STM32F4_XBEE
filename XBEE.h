@@ -181,6 +181,7 @@ public:
 
 	bool getLocalXbeeAddress(uint32_t timeout_millis);
 	bool getDestinationAddressFromXbee();
+	bool setDestinationAddressInLocalXbee(uint8_t* address);
 	bool saveChangesinLocalXbee();
 	bool searchActiveRemoteXbees(uint32_t timeout_millis);
 	int8_t getNeighbourIndexByName(char* name, bool getFirstOccurenceIfMultiple);

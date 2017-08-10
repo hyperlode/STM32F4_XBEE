@@ -59,9 +59,6 @@ void ApplicationController::init(uint32_t* millis){
 	mainMenu.addItem("PTM Define role BASE, BAIL or CROWD(from Xbee name)", ptmGetRoleFromXbeeName, none);
 	mainMenu.addItem("PTM get destination xbee ", setPtmDestination, none);
 	mainMenu.addItem("xbee send broadcast message ", xbeeSendMessageBroadcast, string);
-
-	ptmInit();
-
 }
 
 void ApplicationController::ptmInit(){
@@ -99,7 +96,6 @@ void ApplicationController::processReceivedPackage(){
 		if (baseStationCalling){
 			printf("Broadcast from base station received\r\n");
 			if (ptmRole != baseStation){
-
 				ptmSetDestination(baseStation, rxData->sourceAddress);
 			}else{
 				printf("This device IS a base station, neglect call from another base station...\r\n");
@@ -426,6 +422,20 @@ void ApplicationController::executeCommand(command command){
 		radio.sendMessageToDestination(command.argument_str,len,true,200);
 		break;
 	}
+	case xbeeSendMessageToBaseStation:
+	{
+
+		if (remoteBaseStationData.isValid){
+			uint16_t len = lengthOfString(command.argument_str, COMMAND_ARGUMENT_STRING_MAX_SIZE, false);
+
+			radio.sendMessage( command.argument_str, remoteBaseStationData.address, len, false, 100);
+		}else{
+			printf("error: no base station configured.\r\n");
+
+		}
+
+	}
+		break;
 
 	case xbeeSendMessageBroadcast:
 		{
@@ -462,15 +472,16 @@ void ApplicationController::executeCommand(command command){
 
 
 		if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "BAIL")){
-			printf("Bail transducer");
+			printf("PTM role set: Bail transducer\r\n");
 			this->ptmRole = bailTransducer;
+			mainMenu.addItem("bail/crowd: send to baseStation", xbeeSendMessageToBaseStation, string);
 			waveShareIO.setLed(LED_BAILTRANSDUCER,true);
 		}else if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "BASE")){
-			printf("Bail Base Station");
+			printf("PTM role set: Bail Base Station\r\n");
 			this->ptmRole = baseStation;
 			waveShareIO.setLed(LED_BASESTATION,true);
 		}else if (generalFunctions::stringsAreEqual((char*)radio.senderXbee.name, "CROWD")){
-			printf("Crowd Transducer");
+			printf("PTM role set: Crowd Transducer\r\n");
 			this->ptmRole = crowdTransducer;
 			waveShareIO.setLed(LED_CROWDTRANSDUCER,true);
 		}else{
@@ -557,6 +568,13 @@ bool ApplicationController::ptmSetDestination(ptmRoles destinationToConnectWith,
 
 			remoteBaseStationData.isValid = true;
 			generalFunctions::copyByteArray(address,remoteBaseStationData.address,  8);
+
+			//set base station address as destination (in xbee)
+			radio.setDestinationAddressInLocalXbee(remoteBaseStationData.address);
+
+
+
+			//
 			//for (uint8_t i = 0; i<8;i++){
 			//	printf("last byte address: %02x\r\n", remoteBaseStationData.address[i]);
 			//	//printf("last byte address: %02x\r\n", address[i]);
