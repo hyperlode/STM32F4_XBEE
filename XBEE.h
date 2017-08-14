@@ -118,8 +118,9 @@ struct rxFrameData{
 	//receive rx data
 	//uint16_t atCommand = INVALID_AT_COMMAND;
 	uint8_t sourceAddress[8];
-	uint8_t RSSI ;//received strength indicator
-	uint8_t options; //0x01 = address broadcast (unicast) , //0x02 PAN broadcast (broadcast)
+	uint8_t RSSI ;//received strength indicator //0 is not available
+	//uint8_t options; //0x01 = address broadcast (unicast) , //0x02 PAN broadcast (broadcast)
+	uint8_t isBroadcastMessage ; //0x01: broadcast, 0x00: non broadcast
 
 	uint8_t data [AT_DATA_SIZE];
 	uint16_t dataLength = 0;

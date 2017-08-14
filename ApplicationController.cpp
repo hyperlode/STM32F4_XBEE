@@ -80,7 +80,7 @@ void ApplicationController::processReceivedPackage(){
 	rxData = radio.getRxPackage();
 
 	printf("signal strength: %d\r\n", (*rxData).RSSI);
-	printf("status (0- 1:unicast, 2: broadcast): %d\r\n", (*rxData).options);
+	printf("status (0:unicast, 1: broadcast): %d\r\n", (*rxData).isBroadcastMessage);
 	//printf("last byte address: %02x\r\n", rxData->sourceAddress[7]);
 	receivedPackageNotYetAnalysed = false;
 
@@ -88,7 +88,7 @@ void ApplicationController::processReceivedPackage(){
 	//ptmRemotesOk
 
 
-	if ((*rxData).options == 2){
+	if ((*rxData).isBroadcastMessage){
 		//if broadcast, that means: init!
 		bool baseStationCalling;
 		baseStationCalling = generalFunctions::stringsAreEqual((char*)rxData->data, "BASE",4 );
@@ -131,7 +131,6 @@ void ApplicationController::refresh(){
 		//check and process for new received data
 		this-> receivedPackageNotYetAnalysed = radio.processReceivedFrame();
 	}else{
-
 		processReceivedPackage();
 	}
 

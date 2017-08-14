@@ -1113,9 +1113,14 @@ bool XBEE::processReceivedFrame(){
 		}
 	}else if( frameType == XBEE_FRAME_TYPE_MODEM_STATUS){
 			processModemStatus(fifoTopFrame);
+
+	}else if (frameType == XBEE_FRAME_TYPE_RECEIVE_PACKET){
+		//program data from another XBEE, needs processing by application
+		rxDataAvailableForHighLevelProcessing = true;
 	}else if (frameType == XBEE_FRAME_TYPE_RX_RECEIVE_PACKET){
-			//rx packet received.
-			rxDataAvailableForHighLevelProcessing = true;
+		//rx packet received.
+		//program data from another XBEE, needs processing by application
+		rxDataAvailableForHighLevelProcessing = true;
 	}else{
 		printf("frame is not a response %d, %d, %d \r\n", atResponse.id ,idOfFrameWaitingForResponse,senderXbeeLockedWaitingForResponse);
 	}
@@ -1200,6 +1205,20 @@ uint8_t XBEE::parseFrame (frameReceive* frame){
 		//transmit status
 		transmitResponse.id =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 1];
 		transmitResponse.status =  frame->frame[FRAME_FRAMEDATA_STARTINDEX + 2];
+
+	}else if (frameType == XBEE_FRAME_TYPE_RECEIVE_PACKET){
+		for (uint8_t i = 0; i< 8; i++){
+			rxData.sourceAddress[i] = frame->frame[4 + i];
+		}
+		rxData.RSSI = 0x00; //unavailable
+		//rxData.options = frame->frame[14];
+		rxData.isBroadcastMessage = (frame->frame[14] & 0b00000010) >> 1; //if option bit 1 set: broadcast, else: unicast.
+		printf("---=> %02x \r\n",frame->frame[14] & 0b00000010);
+		rxData.dataLength = frame->lengthFrameData - 12;
+		for (uint8_t i = 0; i< rxData.dataLength; i++){
+			rxData.data[i] = frame->frame[15 + i];
+		}
+
 	}else if (frameType == XBEE_FRAME_TYPE_RX_RECEIVE_PACKET){
 		//received package https://www.digi.com/resources/documentation/digidocs/pdfs/90001500.pdf p121
 		for (uint8_t i = 0; i< 8; i++){
@@ -1209,7 +1228,8 @@ uint8_t XBEE::parseFrame (frameReceive* frame){
 		//printf("xx\r\n");
 		rxData.RSSI = frame->frame[12];
 		//printf("xx%d\r\n",rxData.RSSI);
-		rxData.options = frame->frame[13];
+		//rxData.options = frame->frame[13];
+		rxData.isBroadcastMessage = (frame->frame[13] & 0b00000010) >> 1; //if option bit 1 set: broadcast, else: unicast.
 		rxData.dataLength = frame->lengthFrameData - 11;
 		//printf("len: %d",rxData.dataLength);
 		for (uint8_t i = 0; i< rxData.dataLength; i++){
